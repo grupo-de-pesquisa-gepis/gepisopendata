@@ -65,7 +65,7 @@ jobs:
         env:
           TAURI_DIR: .
         run: |
-          npx tauri build
+          npx --yes @tauri-apps/cli build
 
       - name: Show bundle contents (Windows)
         if: matrix.platform == 'windows-latest'
