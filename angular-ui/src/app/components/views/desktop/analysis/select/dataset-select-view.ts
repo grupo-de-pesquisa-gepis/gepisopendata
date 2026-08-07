@@ -246,6 +246,7 @@ export class DatasetSelectView implements OnInit {
     if (group && groupName) {
       console.log('Grupo selecionado para análise:', group.name);
       this.stateService.setSelectedGroup(groupName);
+      this.stateService.currentAnalysis.set(null);
       this.router.navigate(['/desktop/analysis/config']);
     }
   }

@@ -111,7 +111,7 @@ export class DatasetStateService {
       await invoke('save_analysis', { config });
       await this.refreshHistory();
       // Update current analysis to the one we just saved
-      const saved = this.allAnalyses().find(a => a.name === config.name || a.id === config.id);
+      const saved = this.allAnalyses().find(a => (config.id && a.id === config.id) || a.name === config.name);
       if (saved) this.currentAnalysis.set(saved);
     } catch (err) {
       console.error('Erro ao salvar análise:', err);

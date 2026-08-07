@@ -23,7 +23,7 @@
                     @if (analysis.publishedArtifacts && analysis.publishedArtifacts.length > 0) {
                         <mat-expansion-panel [expanded]="false" class="mat-elevation-z0">
                             <mat-expansion-panel-header>
-                                <mat-panel-title>
+                                <mat-panel-title [matTooltip]="analysis.name">
                                     <mat-icon class="analysis-icon">folder_shared</mat-icon>
                                     {{ analysis.name }}
                                 </mat-panel-title>
@@ -31,7 +31,7 @@
                             
                             <mat-nav-list class="artifact-list">
                                 @for (artifact of analysis.publishedArtifacts; track artifact.id) {
-                                    <a mat-list-item (click)="goToArtifact(analysis.id!, artifact.id)">
+                                    <a mat-list-item (click)="goToArtifact(analysis.id!, artifact.id)" [matTooltip]="artifact.label" matTooltipPosition="after">
                                         <mat-icon matListItemIcon>{{ artifact.type === 'barchart' ? 'bar_chart' : 'description' }}</mat-icon>
                                         <span matListItemTitle>{{ artifact.label }}</span>
                                     </a>

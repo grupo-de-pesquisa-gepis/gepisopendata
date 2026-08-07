@@ -432,6 +432,10 @@ export class DescritivaView implements OnInit {
   }
 
   editCurrent() {
+    const current = this.config();
+    if (current?.groupName) {
+      this.stateService.setSelectedGroup(current.groupName);
+    }
     this.router.navigate(['/desktop/analysis/config']);
   }
 

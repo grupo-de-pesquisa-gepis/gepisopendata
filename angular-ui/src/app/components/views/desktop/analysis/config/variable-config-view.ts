@@ -297,6 +297,9 @@ export class VariableConfigView implements OnInit {
   
   displayedColumns = ['select', 'name', 'type', 'statisticalType'];
 
+  editingId: string | null = null;
+  publishedArtifacts: any[] = [];
+
   private getDefaultStatisticalType(primitiveType: string): string {
     const type = (primitiveType || '').toLowerCase();
     // Broaden the check to include 'num' and other numeric indicators
@@ -314,20 +317,53 @@ export class VariableConfigView implements OnInit {
   }
 
   async initialLoad() {
-    const name = this.groupName();
+    const current = this.stateService.currentAnalysis();
+    const name = this.groupName() || current?.groupName;
     if (!name) return;
+
+    if (current && (current.groupName === name || !this.groupName())) {
+      this.editingId = current.id || null;
+      this.publishedArtifacts = current.publishedArtifacts || [];
+      this.analysisName = current.name || '';
+      if (current.dictionary) {
+        this.selectedDictionary = current.dictionary;
+      }
+    }
 
     this.isLoadingFiles.set(true);
     this.isLoadingColumns.set(true);
     try {
       const result = await invoke<any>('analyze_group', { groupName: name });
       this.format.set(result.format);
-      this.files.set(result.files.map((f: string) => ({ name: f, selected: true })));
-      this.columns.set(result.common_columns.map((c: any) => ({ 
-        ...c, 
-        included: false,
-        statisticalType: this.getDefaultStatisticalType(c.type)
+      
+      const savedFiles = current?.files || [];
+      this.files.set(result.files.map((f: string) => ({ 
+        name: f, 
+        selected: current ? savedFiles.includes(f) : true 
       })));
+
+      const savedVarsMap = new Map((current?.variables || []).map((v: any) => [v.name, v]));
+
+      this.columns.set(result.common_columns.map((c: any) => {
+        const savedVar = savedVarsMap.get(c.name);
+        if (savedVar) {
+          return { 
+            ...c, 
+            included: true,
+            description: savedVar.description || c.description,
+            statisticalType: savedVar.statisticalType || this.getDefaultStatisticalType(c.type)
+          };
+        }
+        return { 
+          ...c, 
+          included: false,
+          statisticalType: this.getDefaultStatisticalType(c.type)
+        };
+      }));
+
+      if (this.selectedDictionary) {
+        await this.onDictionaryChange();
+      }
     } catch (err) {
       console.error('Falha ao carregar grupo:', err);
     } finally {
@@ -483,6 +519,7 @@ export class VariableConfigView implements OnInit {
     }
 
     const config = {
+      id: this.editingId || undefined,
       name: this.analysisName,
       groupName: this.groupName() || 'unknown',
       files: this.files().filter(f => f.selected).map(f => f.name),
@@ -492,7 +529,8 @@ export class VariableConfigView implements OnInit {
         type: v.type,
         description: v.description,
         statisticalType: v.statisticalType
-      }))
+      })),
+      publishedArtifacts: this.publishedArtifacts
     };
     
     await this.stateService.saveAnalysis(config);
