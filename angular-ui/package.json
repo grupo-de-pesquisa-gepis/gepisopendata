@@ -6,7 +6,7 @@
     "ng-build-homolog": "ng build --configuration homolog",
     "ng-build-prod": "ng build --configuration production",
     "tauri:build-dev": "npm run ng-build-dev && cd ../ && cargo tauri build",
-    "tauri:dev": "concurrently \"ng build --configuration development --watch\" \"npm run run-cargo-dev\"",
+    "tauri:dev": "npm run ng-build-dev && concurrently \"ng build --configuration development --watch\" \"npm run run-cargo-dev\"",
     "run-cargo-dev": "node -e \"const cp = require('child_process'); const cmd = 'npm run ' + (process.platform === 'win32' ? 'run-cargo-dev:win' : 'run-cargo-dev:unix'); cp.spawn(cmd, { stdio: 'inherit', shell: true });\"",
     "run-cargo-dev:win": "cd ../ && (cargo tauri dev || \"%USERPROFILE%\\.cargo\\bin\\cargo\" tauri dev)",
     "run-cargo-dev:unix": "cd ../ && (source $HOME/.cargo/env || true) && cargo tauri dev",

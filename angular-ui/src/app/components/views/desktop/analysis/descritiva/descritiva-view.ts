@@ -92,8 +92,6 @@ export class SampleDialog {
     MatFormFieldModule,
     MatInputModule,
     FormsModule,
-    ConfirmDialog,
-    SampleDialog,
   ],
   template: `
     <div class="container">
