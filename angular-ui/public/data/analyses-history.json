@@ -2167,5 +2167,232 @@
         "type": "Num"
       }
     ]
+  },
+  {
+    "dictionary": "dicionário_dados_educação_básica.xlsx",
+    "files": [
+      "microdados_ed_basica_2024.csv",
+      "microdados_ed_basica_2023.csv",
+      "microdados_ed_basica_2022.csv",
+      "microdados_ed_basica_2021.csv",
+      "Tabela_Matricula_2025_V2.csv"
+    ],
+    "groupName": "Censo Escolar INEP",
+    "id": "7fcac7fb-4dec-4356-bcfd-5334a7f8a098",
+    "name": "Censo Escolar: Matrículas Tempo Integral",
+    "publishedArtifacts": [
+      {
+        "createdAt": "2026-08-07T13:50:39.307Z",
+        "data": {
+          "x": [
+            "2022",
+            "2023",
+            "2021",
+            "2025",
+            "2024"
+          ],
+          "y": [
+            2895293,
+            3146206,
+            2603721,
+            3476726,
+            3328619
+          ]
+        },
+        "id": "8d059fe5-2571-443f-b242-3fa5a7f953ad",
+        "label": "Num Mat Ed Infantil 2021-1025",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "sum",
+          "showBarValues": false,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "QT_MAT_INF_INT"
+        },
+        "type": "barchart"
+      },
+      {
+        "createdAt": "2026-08-07T13:51:38.386Z",
+        "data": {
+          "x": [
+            "2021",
+            "2025",
+            "2022",
+            "2023",
+            "2024"
+          ],
+          "y": [
+            1175760,
+            1809737,
+            1460222,
+            1508933,
+            1687226
+          ]
+        },
+        "id": "520cce75-3438-4d58-8b3e-04a8cd15084f",
+        "label": "Num Mat Ens Médio 2021-2025",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "sum",
+          "showBarValues": true,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "QT_MAT_MED_INT"
+        },
+        "type": "barchart"
+      },
+      {
+        "createdAt": "2026-08-07T13:54:01.857Z",
+        "data": {
+          "x": [
+            "2021",
+            "2022",
+            "2023",
+            "2024",
+            "2025"
+          ],
+          "y": [
+            1098780,
+            1634785,
+            1929273,
+            2046602,
+            2264070
+          ]
+        },
+        "id": "f5192fc5-14b9-4f28-9c69-d4a6ce9038e6",
+        "label": "Num Mat Ens Fund Anos Finais 2021-2025",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "sum",
+          "showBarValues": true,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "QT_MAT_FUND_AF_INT"
+        },
+        "type": "barchart"
+      },
+      {
+        "createdAt": "2026-08-07T13:55:44.311Z",
+        "data": {
+          "x": [
+            "2022",
+            "2023",
+            "2024",
+            "2025",
+            "2021"
+          ],
+          "y": [
+            3300905,
+            3893409,
+            4215478,
+            4824584,
+            2333849
+          ]
+        },
+        "id": "1090ff80-4b0d-45f3-a4aa-db0a1d888396",
+        "label": "Num Mat Ens Fund 2021-2025",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "sum",
+          "showBarValues": true,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "QT_MAT_FUND_INT"
+        },
+        "type": "barchart"
+      },
+      {
+        "createdAt": "2026-08-07T13:57:31.330Z",
+        "data": {
+          "x": [
+            "2021",
+            "2023",
+            "2022",
+            "2024",
+            "2025"
+          ],
+          "y": [
+            583519,
+            757871,
+            652427,
+            837785,
+            930189
+          ]
+        },
+        "id": "e6b85f43-386a-459b-8b87-262c06b5dc8e",
+        "label": "Num Mat Ed Inf Pré Escola - 2021-2025",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "sum",
+          "showBarValues": false,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "QT_MAT_INF_PRE_INT"
+        },
+        "type": "barchart"
+      },
+      {
+        "createdAt": "2026-08-07T13:58:38.199Z",
+        "data": {
+          "x": [
+            "2022",
+            "2023",
+            "2024",
+            "2025",
+            "2021"
+          ],
+          "y": [
+            178346,
+            178476,
+            179286,
+            178766,
+            221140
+          ]
+        },
+        "id": "b2568c4b-dd67-4206-9a6d-aa5d6358a840",
+        "label": "Num Mat Ed Inf Creche - 2021-2025",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "count",
+          "showBarValues": false,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "QT_MAT_INF_CRE_INT"
+        },
+        "type": "barchart"
+      },
+      {
+        "createdAt": "2026-08-07T14:01:16.420Z",
+        "data": {
+          "x": [
+            "2025",
+            "2023",
+            "2024",
+            "2021",
+            "2022"
+          ],
+          "y": [
+            2560514,
+            1964136,
+            2168876,
+            1235069,
+            1666120
+          ]
+        },
+        "id": "7e627309-4c7f-445a-b464-146b8427c9da",
+        "label": "Num Mat Ens Fun Anos Iniciais - 2021-2025",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "sum",
+          "showBarValues": false,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "QT_MAT_FUND_AI_INT"
+        },
+        "type": "barchart"
+      }
+    ],
+    "updatedAt": "2026-08-07T14:32:44.458373859+00:00",
+    "variables": [
+      {
+        "description": "Ano do Censo",
+        "name": "NU_ANO_CENSO",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      }
+    ]
   }
 ]
