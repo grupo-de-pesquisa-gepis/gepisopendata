@@ -197,11 +197,11 @@ export class SampleDialog {
                     <h3>Publicações desta Análise ({{ analysisConfig.publishedArtifacts.length }}):</h3>
                     <div class="artifact-grid">
                       @for (art of analysisConfig.publishedArtifacts; track art.id) {
-                        <mat-card appearance="outlined" class="artifact-item-card" (click)="goToArtifact(analysisConfig.id!, art.id)">
+                        <mat-card appearance="outlined" class="artifact-item-card" (click)="goToArtifact(analysisConfig.id!, art.id)" [matTooltip]="art.label" [title]="art.label">
                           <mat-card-content>
                             <mat-icon>{{ art.type === 'barchart' ? 'bar_chart' : 'description' }}</mat-icon>
                             <div class="art-info">
-                              <span class="art-label">{{ art.label }}</span>
+                              <span class="art-label" [title]="art.label">{{ art.label }}</span>
                               <span class="art-date">{{ art.createdAt | date:'short' }}</span>
                             </div>
                           </mat-card-content>
