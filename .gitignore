@@ -14,3 +14,10 @@ downloads/
 /data/
 !/angular-ui/public/data/*.json
 /home/wgn/WORKING/Projects-Srcs/Projects-Srcs-FzlSoft/AnsibleArtifacts/vars/vault.yml
+
+# Emacs project-isolated cache and package environments
+.emacs-*/
+.emacs-cache-gepisopendata/
+/node_modules/.bin/tauri
+/node_modules/@tauri-apps/
+/temp_prints/
