@@ -1,0 +1,75 @@
+---
+- name: Prepare Fedora environment and build Windows packages (exe / nsis)
+  hosts: localhost
+  connection: local
+  vars:
+    project_dir: "{{ playbook_dir }}"
+    frontend_dir: "{{ playbook_dir }}/angular-ui"
+    rust_target: "x86_64-pc-windows-gnu"
+
+  tasks:
+    - name: Install Fedora DNF dependencies for MinGW and NSIS
+      become: true
+      ansible.builtin.dnf:
+        name:
+          - mingw64-gcc
+          - mingw64-gcc-c++
+          - mingw64-winpthreads-static
+          - mingw32-nsis
+          - mingw64-nsis
+          - jq
+          - gcc
+          - gcc-c++
+        state: present
+
+    - name: Ensure Rust target x86_64-pc-windows-gnu is added
+      ansible.builtin.command:
+        cmd: rustup target add {{ rust_target }}
+      register: rustup_res
+      changed_when: "'is up to date' not in rustup_res.stdout"
+
+    - name: Ensure ~/.cargo directory exists
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.cargo"
+        state: directory
+        mode: '0755'
+
+    - name: Configure Cargo MinGW linker in ~/.cargo/config.toml
+      ansible.builtin.blockinfile:
+        path: "{{ ansible_env.HOME }}/.cargo/config.toml"
+        create: true
+        mode: '0644'
+        marker: "# {mark} ANSIBLE MANAGED BLOCK (x86_64-pc-windows-gnu)"
+        block: |
+          [target.x86_64-pc-windows-gnu]
+          linker = "x86_64-w64-mingw32-gcc"
+          ar = "x86_64-w64-mingw32-ar"
+
+    - name: Install root dependencies (Tauri CLI)
+      ansible.builtin.command:
+        cmd: npm install
+        chdir: "{{ project_dir }}"
+      changed_when: false
+
+    - name: Install Angular frontend dependencies
+      ansible.builtin.command:
+        cmd: npm install
+        chdir: "{{ frontend_dir }}"
+      changed_when: false
+
+    - name: Build Angular production frontend
+      ansible.builtin.command:
+        cmd: npm run build -- --configuration production
+        chdir: "{{ frontend_dir }}"
+      changed_when: false
+
+    - name: Build Windows binaries (.exe / installer) via Tauri CLI
+      ansible.builtin.command:
+        cmd: npx --yes @tauri-apps/cli build --target {{ rust_target }}
+        chdir: "{{ project_dir }}"
+      register: build_out
+      changed_when: true
+
+    - name: Display build completion output
+      ansible.builtin.debug:
+        msg: "{{ build_out.stdout_lines }}"
