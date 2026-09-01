@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(ls*)",
+      "Bash(ls -la*)",
+      "Bash(pwd)",
+      "Bash(tree*)",
+      "Bash(cat*)",
+      "Bash(tee*)",
+      "Bash(echo*)",
+      "Bash(printf*)",
+      "Bash(head*)",
+      "Bash(tail*)",
+      "Bash(wc*)",
+      "Bash(grep*)",
+      "Bash(egrep*)",
+      "Bash(fgrep*)",
+      "Bash(rg*)",
+      "Bash(find*)",
+      "Bash(fd*)",
+      "Bash(diff*)",
+      "Bash(file*)",
+      "Bash(stat*)",
+      "Bash(du*)",
+      "Bash(df*)",
+      "Bash(which*)",
+      "Bash(whoami)",
+      "Bash(uname*)",
+      "Bash(date*)",
+      "Bash(env)",
+      "Bash(basename*)",
+      "Bash(dirname*)",
+      "Bash(realpath*)",
+
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git remote -v)",
+      "Bash(git blame*)",
+      "Bash(git stash list*)",
+
+      "Bash(cargo check*)",
+      "Bash(cargo build*)",
+      "Bash(cargo tree*)",
+      "Bash(cargo metadata*)",
+
+      "Bash(npm run ng-build-dev*)",
+      "Bash(npm run test*)",
+      "Bash(npm ls*)",
+      "Bash(ng version*)",
+
+      "Read",
+      "Glob",
+      "Grep"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "filesystem",
+    "fetch",
+    "github"
+  ]
+}

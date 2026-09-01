@@ -21,3 +21,4 @@ downloads/
 /node_modules/.bin/tauri
 /node_modules/@tauri-apps/
 /temp_prints/
+/TEMP/
