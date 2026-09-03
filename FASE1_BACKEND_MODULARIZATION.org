@@ -1,0 +1,241 @@
+#+TITLE: Plano Detalhado de Modularização - Fase 1 (Backend Rust)
+#+SUBTITLE: Arquitetura Limpa, Desacoplamento do Tauri e Módulos Independentes (Core Pure Rust)
+#+LANGUAGE: pt_BR
+#+DATE: 2026-09-03
+#+AUTHOR: Gepis Research Group & Antigravity
+
+* 1. Visão Geral e Nova Filosofia de Arquitetura
+
+O aplicativo *Gepis Dados Abertos* necessita de uma separação estrita entre a **Lógica de Negócio / Processamento de Dados (Core)** e o **Framework de Interface Desktop (Tauri v2)**.
+
+Atualmente, funções essenciais como download de microdados do INEP, extração de ZIP, leitura de planilhas Excel (Calamine), persistência em JSON e pipeline Polars estão fortemente acopladas a parâmetros como ~app_handle: tauri::AppHandle~.
+
+** O Princípio Central: Arquitetura Hexagonal (Ports & Adapters)
+Toda a lógica de negócios e I/O do Rust deve ser **100% agnóstica ao Tauri**:
+- O *Core* opera exclusivamente com tipos padrão do Rust (~std::path::Path~, ~PathBuf~, structs de domínio, streams, closures/traits de progresso).
+- O *Tauri* atua apenas como um **Adaptador de Apresentação (Adapter/Controller)**: extrai caminhos do sistema operacional, repassa para o Core e devolve o resultado via IPC.
+- *Benefício Imediato*: Qualquer funcionalidade (como baixar microdados do INEP, processar ETL ou manipular JSONs) pode ser executada via **Linha de Comando (CLI)**, scripts automatizados, rotinas de CI/CD ou testes unitários sem abrir nenhuma janela gráfica.
+
+#+BEGIN_SRC text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        ADAPTADORES DE ENTRADA                          │
+│                                                                        │
+│   ┌───────────────────────────┐      ┌─────────────────────────────┐   │
+│   │   Tauri IPC Commands      │      │     CLI Binary / Scripts    │   │
+│   │  (commands/*.rs)          │      │    (bin/gepis-cli.rs)       │   │
+│   └─────────────┬─────────────┘      └──────────────┬──────────────┘   │
+└─────────────────┼───────────────────────────────────┼──────────────────┘
+                  │ Injeta Paths/Configs              │ Injeta Args/Flags
+                  ▼                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                   CORE ENGINE (PURO RUST - ZERO TAURI)                 │
+│                                                                        │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │                        models/ (Domain)                        │   │
+│   │        Dataset, AnalysisConfig, DictionaryEntry, etc.          │   │
+│   └────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│   ┌───────────────────┐  ┌──────────────────┐  ┌───────────────────┐   │
+│   │   Downloader &    │  │  ETL & Polars    │  │   Dictionary      │   │
+│   │   ZIP Extractor   │  │  Data Processing │  │   Parser (Excel)  │   │
+│   └───────────────────┘  └──────────────────┘  └───────────────────┘   │
+│                                                                        │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │         fzl_json_store / persistence (JSON Store Generic)      │   │
+│   │       Leitura atômica, escrita segura, queries e esquemas      │   │
+│   └────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │                  GitHub REST Automation Client                 │   │
+│   └────────────────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────────────┘
+#+END_SRC
+
+---
+
+* 2. Módulo de Persistência JSON Dedicado (=fzl-persistence-json=)
+
+Para atender à necessidade de gerenciamento consistente e desacoplado dos arquivos JSON (=datasets-registry.json=, =analyses-history.json=, =github-config.json=), definimos um módulo utilitário genérico de persistência.
+
+** 2.1. O que é o =fzl_persistence_json=?
+É uma camada genérica e thread-safe para operações de armazenamento baseadas em arquivos JSON com os seguintes recursos:
+- *Escrita Atômica*: Grava primeiro em arquivo temporário (=.tmp=) e renomeia atomicamente, prevenindo corrupção de dados em caso de falha ou desligamento.
+- *Tipagem Estrita via Generics*: Opera sobre qualquer tipo que implemente ~serde::Serialize + serde::de::DeserializeOwned~.
+- *Multidestino (Dual-Write Dev/Prod)*: Suporta sincronização automática entre múltiplos caminhos (ex: AppData local e diretório do Angular em modo de desenvolvimento).
+- *Isenção Total do Tauri*: Opera apenas recebendo ~&Path~ ou ~PathBuf~.
+
+** 2.2. Assinatura da Interface (=services/persistence/json_store.rs=)
+#+BEGIN_SRC rust
+use std::path::{Path, PathBuf};
+use serde::{de::DeserializeOwned, Serialize};
+
+pub struct JsonStore;
+
+impl JsonStore {
+    /// Carrega e desserializa um arquivo JSON. Se não existir, retorna um Vec vazio ou Default.
+    pub fn load_list<T: DeserializeOwned>(path: &Path) -> Result<Vec<T>, String> { ... }
+
+    pub fn load_optional<T: DeserializeOwned>(path: &Path) -> Result<Option<T>, String> { ... }
+
+    /// Salva de forma atômica e formatada (pretty-print) em um ou múltiplos destinos
+    pub fn save_atomic<T: Serialize>(paths: &[PathBuf], data: &T) -> Result<(), String> { ... }
+
+    /// Upsert por ID ou predicado
+    pub fn upsert_item<T, F>(paths: &[PathBuf], item: T, matcher: F) -> Result<(), String>
+    where
+        T: Serialize + DeserializeOwned + Clone,
+        F: Fn(&T) -> bool,
+    { ... }
+
+    /// Remove itens que satisfaçam um predicado
+    pub fn delete_items<T, F>(paths: &[PathBuf], predicate: F) -> Result<usize, String>
+    where
+        T: Serialize + DeserializeOwned,
+        F: Fn(&T) -> bool,
+    { ... }
+}
+#+END_SRC
+
+---
+
+* 3. Desacoplamento dos Casos de Uso (Exemplo: Download de Microdados INEP)
+
+** 3.1. Como é hoje (Acoplado ao Tauri)
+#+BEGIN_SRC rust
+// main.rs atual - depende do AppHandle diretamente
+#[tauri::command]
+async fn download_dataset(app_handle: tauri::AppHandle, url: String, metadata: serde_json::Value) -> Result<String, String> {
+    // Código mistura resolução do AppHandle, reqwest, zip::ZipArchive e escrita em disco
+}
+#+END_SRC
+
+** 3.2. Como fica refatorado (Core Puro + Adaptador Tauri)
+
+*** Core Puro (=services/downloader.rs= - Zero dependências do Tauri)
+#+BEGIN_SRC rust
+use std::path::{Path, PathBuf};
+use crate::models::DatasetMetadata;
+
+pub struct DownloadOptions<'a> {
+    pub url: &'a str,
+    pub target_dir: &'a Path,
+    pub expected_format: &'a str,
+    pub on_progress: Option<Box<dyn Fn(u64, u64) + Send + Sync>>,
+}
+
+pub async fn execute_download(options: DownloadOptions<'_>) -> Result<Vec<String>, String> {
+    // 1. Download assíncrono via reqwest
+    // 2. Extração de ZIP automática e segura se aplicável
+    // 3. Retorna lista dos arquivos extraídos e prontos
+}
+#+END_SRC
+
+*** Adaptador Tauri (=commands/dataset_commands.rs=)
+#+BEGIN_SRC rust
+use tauri::{AppHandle, Emitter};
+use crate::services::{downloader, path_resolver, registry_repo};
+
+#[tauri::command]
+pub async fn download_dataset(
+    app_handle: AppHandle,
+    url: String,
+    metadata: serde_json::Value
+) -> Result<String, String> {
+    // 1. Tauri apenas resolve os caminhos do SO
+    let target_dir = path_resolver::get_dataset_target_dir(&app_handle, &metadata)?;
+    
+    // 2. Chama o Core puro (repassando callback de progresso opcional via Tauri Emitter)
+    let app_clone = app_handle.clone();
+    let options = downloader::DownloadOptions {
+        url: &url,
+        target_dir: &target_dir,
+        expected_format: metadata["formato"].as_str().unwrap_or("outro"),
+        on_progress: Some(Box::new(move |downloaded, total| {
+            let _ = app_clone.emit("download-progress", (downloaded, total));
+        })),
+    };
+    let final_files = downloader::execute_download(options).await?;
+
+    // 3. Atualiza registro através do repositório
+    registry_repo::register_dataset(&app_handle, metadata, final_files, &target_dir)?;
+
+    Ok(format!("Download concluído com sucesso"))
+}
+#+END_SRC
+
+*** Exemplo de Uso via CLI ou Script (Sem abrir interface)
+#+BEGIN_SRC rust
+// Exemplo em um binário CLI futuro: src-tauri/src/bin/cli.rs
+#[tokio::main]
+async fn main() {
+    let target_dir = std::path::PathBuf::from("./downloads/inep_2023");
+    let options = downloader::DownloadOptions {
+        url: "https://download.inep.gov.br/microdados/censo_escolar_2023.zip",
+        target_dir: &target_dir,
+        expected_format: "csv",
+        on_progress: Some(Box::new(|d, t| println!("Progresso: {}/{} bytes", d, t))),
+    };
+    downloader::execute_download(options).await.unwrap();
+    println!("Download de microdados concluído via terminal!");
+}
+#+END_SRC
+
+---
+
+* 4. Estrutura Modular Proposta
+
+#+BEGIN_EXAMPLE
+src-tauri/src/
+├── main.rs                   # Entry point do aplicativo Desktop Tauri
+├── logging.rs                # Setup de logs (tracing / tracing_appender)
+├── app_menu.rs               # Menus nativos e atalhos do desktop
+│
+├── models/                   # Structs de Domínio (Pure Rust + Serde)
+│   ├── mod.rs
+│   ├── dataset.rs            # DatasetEntry, GroupAnalysis, ColumnInfo
+│   ├── analysis.rs           # AnalysisConfig, AnalysisArtifact, BarChartData
+│   ├── dictionary.rs         # DictionaryEntry
+│   └── github.rs             # GithubConfig
+│
+├── services/                 # CORE DA APLICAÇÃO (100% agnóstico ao Tauri)
+│   ├── mod.rs
+│   ├── path_resolver.rs      # Utilitários de caminho, sanitização e detecção de delimitadores
+│   ├── persistence/          # Módulo de persistência JSON genérico (fzl_persistence_json)
+│   │   ├── mod.rs
+│   │   └── json_store.rs     # Escrita atômica, leitura segura e CRUD JSON
+│   ├── registry_repo.rs      # Repositório de alto nível para datasets e análises
+│   ├── downloader.rs         # Engine de download HTTP e descompactação ZIP
+│   ├── dictionary_parser.rs  # Extrator de dicionários via Calamine (Excel)
+│   ├── etl_service.rs        # Pipeline ETL Polars (LazyFrame, joins, agregações)
+│   └── github_client.rs      # Cliente REST GitHub para PRs e versionamento
+│
+└── commands/                 # ADAPTADORES TAURI IPC (Controladores finos)
+    ├── mod.rs
+    ├── dataset_commands.rs   # Wrappers para downloader, dicionários e registros
+    ├── analysis_commands.rs  # Wrappers para ETL, gráficos e histórico
+    ├── github_commands.rs    # Wrappers para config e PRs no GitHub
+    └── system_commands.rs    # Comandos auxiliares (diretórios, status)
+#+END_EXAMPLE
+
+---
+
+* 5. Benefícios da Abordagem
+
+1. *Testabilidade*: Testes unitários para o downloader, o leitor de dicionário Calamine, o agregador Polars e o repositório JSON rodam em milissegundos com ~cargo test~ puro, sem inicializar o webview.
+2. *Reutilização*: O módulo =services= pode ser empacotado como uma crate independente no futuro (=gepis-core= / =fzl-persistence-json=) ou consumido por uma CLI de processamento em lote.
+3. *Manutenibilidade*: O código do Tauri fica restrito a traduzir requisições de tela em chamadas ao Core. Qualquer mudança na API do Tauri (v2 -> v3) não afeta nenhuma regra de negócio.
+4. *Robustez*: O uso de escrita atômica no armazenamento JSON elimina o risco de arquivos corrompidos durante falhas.
+
+---
+
+* 6. Plano de Execução Atualizado da Fase 1
+
+| Etapa | Tarefa | Detalhe |
+| :--- | :--- | :--- |
+| *1.1* | Modelos Tipados | Criar =models/= com structs estritas para datasets, análises e github. |
+| *1.2* | Módulo de Persistência JSON | Implementar =services/persistence/json_store.rs= com escrita atômica. |
+| *1.3* | Core de Serviços Puros | Implementar =path_resolver=, =downloader=, =dictionary_parser=, =etl_service= e =github_client= sem dependência de ~AppHandle~. |
+| *1.4* | Repositório de Registros | Implementar =registry_repo.rs= conectando modelos ao =json_store=. |
+| *1.5* | Adaptadores / Comandos Tauri | Criar =commands/*.rs= fazendo a ponte entre Tauri IPC e os serviços puros. |
+| *1.6* | Menu, Logs e Main | Refatorar =app_menu.rs=, =logging.rs= e reduzir =main.rs= para inicializador. |
+| *1.7* | Otimização do =Cargo.toml= | Remover =bollard=, =dotenvy=, =serde_yaml= e validar compilação com =cargo check=. |
