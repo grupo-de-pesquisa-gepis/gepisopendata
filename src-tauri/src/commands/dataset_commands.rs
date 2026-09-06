@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use crate::models::{ColumnInfo, DictionaryEntry, GroupAnalysis};
 use crate::services::{
     path_resolver,
@@ -26,7 +26,26 @@ pub async fn download_dataset(
     let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     let target_dir = path_resolver::resolve_dataset_dir(&base_downloads_path, grupo, titulo_curto);
 
-    let final_files = Downloader::download_and_extract(&url, &target_dir, &formato_esperado).await?;
+    let app_handle_clone = app_handle.clone();
+    let on_progress = move |downloaded: u64, total: u64| {
+        let percent = if total > 0 {
+            ((downloaded as f64 / total as f64) * 1000.0).round() / 10.0
+        } else {
+            0.0
+        };
+        let _ = app_handle_clone.emit("download-progress", serde_json::json!({
+            "downloaded": downloaded,
+            "total": total,
+            "percent": percent
+        }));
+    };
+
+    let final_files = Downloader::download_and_extract(
+        &url,
+        &target_dir,
+        &formato_esperado,
+        Some(&on_progress),
+    ).await?;
 
     RegistryRepo::save_dataset(&app_data_dir, metadata, &final_files, &target_dir)?;
 

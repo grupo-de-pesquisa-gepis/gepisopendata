@@ -10,6 +10,85 @@ use crate::services::persistence::JsonStore;
 pub struct EtlService;
 
 impl EtlService {
+    /// Extrai o cabeçalho e infere os tipos das colunas de um arquivo CSV analisando até N linhas.
+    pub fn inspect_csv_columns(file_path: &Path, sample_size: usize) -> Result<HashMap<String, String>, String> {
+        if !file_path.exists() {
+            return Err(format!("Arquivo CSV não encontrado: {:?}", file_path));
+        }
+
+        let file = File::open(file_path).map_err(|e| format!("Erro ao abrir arquivo {:?}: {}", file_path, e))?;
+        let sep = detect_delimiter_from_file(file_path);
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(true)
+            .delimiter(sep)
+            .from_reader(file);
+
+        let headers = rdr.headers().map_err(|e| format!("Erro ao ler cabeçalhos: {}", e))?.clone();
+        if headers.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let mut is_numeric = vec![true; headers.len()];
+        let mut has_non_empty = vec![false; headers.len()];
+        let mut rows_inspected = 0;
+
+        for result in rdr.records() {
+            if rows_inspected >= sample_size {
+                break;
+            }
+            if let Ok(record) = result {
+                rows_inspected += 1;
+                for (i, val) in record.iter().enumerate() {
+                    let trimmed = val.trim();
+                    if !trimmed.is_empty() {
+                        has_non_empty[i] = true;
+                        if trimmed.parse::<f64>().is_err() {
+                            is_numeric[i] = false;
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut result_cols = HashMap::new();
+        for (i, h) in headers.iter().enumerate() {
+            let col_name = h.trim().to_string();
+            if !col_name.is_empty() {
+                let col_type = if has_non_empty[i] && is_numeric[i] {
+                    "Número"
+                } else {
+                    "Texto"
+                };
+                result_cols.insert(col_name, col_type.to_string());
+            }
+        }
+
+        Ok(result_cols)
+    }
+
+    /// Calcula a interseção de mapas de colunas.
+    pub fn intersect_columns_map(
+        accumulated: Option<HashMap<String, String>>,
+        new_cols: HashMap<String, String>,
+    ) -> Option<HashMap<String, String>> {
+        if new_cols.is_empty() {
+            return accumulated;
+        }
+
+        match accumulated {
+            Some(acc) => {
+                let mut common = HashMap::new();
+                for (name, col_type) in acc {
+                    if new_cols.contains_key(&name) {
+                        common.insert(name, col_type);
+                    }
+                }
+                Some(common)
+            }
+            None => Some(new_cols),
+        }
+    }
+
     /// Executa o pipeline ETL concatenando múltiplos arquivos CSV selecionados e salvando o arquivo consolidado.
     pub fn run_etl(
         app_data_dir: &Path,
@@ -128,7 +207,6 @@ impl EtlService {
             .map_err(|e| format!("Erro na agregação: {}", e))?;
 
         let cats: Vec<String> = df.column(category_col)
-            .or_else(|_| df.column(category_col))
             .map_err(|e| e.to_string())?
             .iter()
             .map(|v| v.to_string().replace('\"', ""))
@@ -235,45 +313,8 @@ impl EtlService {
                 all_files.push(rel_path);
 
                 if format == "csv" {
-                    if let Ok(file) = File::open(&file_path) {
-                        let delimiter = detect_delimiter_from_file(&file_path);
-                        let mut rdr = csv::ReaderBuilder::new()
-                            .has_headers(true)
-                            .delimiter(delimiter)
-                            .from_reader(file);
-
-                        if let Ok(headers) = rdr.headers().map(|h| h.clone()) {
-                            let mut current_file_cols = HashMap::new();
-                            let types = if let Some(Ok(record)) = rdr.records().next() {
-                                let mut t = Vec::new();
-                                for val in record.iter() {
-                                    t.push(if val.parse::<f64>().is_ok() { "Número" } else { "Texto" });
-                                }
-                                t
-                            } else {
-                                vec!["Texto"; headers.len()]
-                            };
-
-                            for (i, h) in headers.iter().enumerate() {
-                                current_file_cols.insert(h.trim().to_string(), types.get(i).unwrap_or(&"Texto").to_string());
-                            }
-
-                            if let Some(common) = common_columns {
-                                if current_file_cols.len() > 1 {
-                                    let mut new_common = HashMap::new();
-                                    for (name, col_type) in common {
-                                        if current_file_cols.contains_key(&name) {
-                                            new_common.insert(name, col_type);
-                                        }
-                                    }
-                                    common_columns = Some(new_common);
-                                } else {
-                                    common_columns = Some(common);
-                                }
-                            } else if current_file_cols.len() > 1 {
-                                common_columns = Some(current_file_cols);
-                            }
-                        }
+                    if let Ok(cols) = Self::inspect_csv_columns(&file_path, 100) {
+                        common_columns = Self::intersect_columns_map(common_columns, cols);
                     }
                 }
             }
@@ -329,45 +370,8 @@ impl EtlService {
             }
 
             if let Some(full_path) = found_full_path {
-                if let Ok(file) = File::open(&full_path) {
-                    let sep = detect_delimiter_from_file(&full_path);
-                    let mut rdr = csv::ReaderBuilder::new()
-                        .has_headers(true)
-                        .delimiter(sep)
-                        .from_reader(file);
-
-                    if let Ok(headers) = rdr.headers().map(|h| h.clone()) {
-                        let mut current_file_cols = HashMap::new();
-                        let types = if let Some(Ok(record)) = rdr.records().next() {
-                            let mut t = Vec::new();
-                            for val in record.iter() {
-                                t.push(if val.parse::<f64>().is_ok() { "Número" } else { "Texto" });
-                            }
-                            t
-                        } else {
-                            vec!["Texto"; headers.len()]
-                        };
-
-                        for (i, h) in headers.iter().enumerate() {
-                            current_file_cols.insert(h.trim().to_string(), types.get(i).unwrap_or(&"Texto").to_string());
-                        }
-
-                        if let Some(common) = common_columns {
-                            if current_file_cols.len() > 1 {
-                                let mut new_common = HashMap::new();
-                                for (name, col_type) in common {
-                                    if current_file_cols.contains_key(&name) {
-                                        new_common.insert(name, col_type);
-                                    }
-                                }
-                                common_columns = Some(new_common);
-                            } else {
-                                common_columns = Some(common);
-                            }
-                        } else if current_file_cols.len() > 1 {
-                            common_columns = Some(current_file_cols);
-                        }
-                    }
+                if let Ok(cols) = Self::inspect_csv_columns(&full_path, 100) {
+                    common_columns = Self::intersect_columns_map(common_columns, cols);
                 }
             }
         }
@@ -416,39 +420,10 @@ impl EtlService {
 
             if let Some(file_name) = csv_file {
                 let full_path = local_path.join(file_name);
-                if !full_path.exists() {
-                    continue;
-                }
-
-                let file = File::open(&full_path).map_err(|e| e.to_string())?;
-                let delimiter = detect_delimiter_from_file(&full_path);
-                let mut rdr = csv::ReaderBuilder::new()
-                    .has_headers(true)
-                    .delimiter(delimiter)
-                    .from_reader(file);
-
-                let headers = rdr.headers().map_err(|e| e.to_string())?.clone();
-
-                let mut current_file_cols = HashMap::new();
-                if let Some(result) = rdr.records().next() {
-                    let record = result.map_err(|e| e.to_string())?;
-                    for (i, header) in headers.iter().enumerate() {
-                        let val = record.get(i).unwrap_or("");
-                        let col_type = if val.parse::<f64>().is_ok() { "Número" } else { "Texto" };
-                        current_file_cols.insert(header.trim().to_string(), col_type.to_string());
+                if full_path.exists() {
+                    if let Ok(cols) = Self::inspect_csv_columns(&full_path, 100) {
+                        common_columns = Self::intersect_columns_map(common_columns, cols);
                     }
-                }
-
-                if let Some(common) = common_columns {
-                    let mut new_common = HashMap::new();
-                    for (name, col_type) in common {
-                        if current_file_cols.contains_key(&name) {
-                            new_common.insert(name, col_type);
-                        }
-                    }
-                    common_columns = Some(new_common);
-                } else {
-                    common_columns = Some(current_file_cols);
                 }
             }
         }
@@ -460,5 +435,49 @@ impl EtlService {
             .collect();
 
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_inspect_csv_columns() {
+        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let csv_path = temp_dir.join("test.csv");
+        let mut f = File::create(&csv_path).unwrap();
+        writeln!(f, "ano;nome;matriculas").unwrap();
+        writeln!(f, "2021;Escola A;150").unwrap();
+        writeln!(f, "2022;Escola B;200").unwrap();
+        writeln!(f, "2023;Escola C;350").unwrap();
+
+        let cols = EtlService::inspect_csv_columns(&csv_path, 50).unwrap();
+        assert_eq!(cols.get("ano"), Some(&"Número".to_string()));
+        assert_eq!(cols.get("nome"), Some(&"Texto".to_string()));
+        assert_eq!(cols.get("matriculas"), Some(&"Número".to_string()));
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_barchart_data_generation() {
+        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let csv_path = temp_dir.join("chart.csv");
+        let mut f = File::create(&csv_path).unwrap();
+        writeln!(f, "categoria;valor").unwrap();
+        writeln!(f, "Sudeste;100").unwrap();
+        writeln!(f, "Sudeste;200").unwrap();
+        writeln!(f, "Nordeste;150").unwrap();
+
+        let chart_sum = EtlService::get_barchart_data(&csv_path, "categoria", "valor", "sum").unwrap();
+        assert_eq!(chart_sum.categories.len(), 2);
+
+        let _ = fs::remove_dir_all(&temp_dir);
     }
 }
