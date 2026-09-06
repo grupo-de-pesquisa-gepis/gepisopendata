@@ -86,6 +86,8 @@ export class SampleDialog {
   ) {}
 }
 
+import { AutoTooltipDirective } from '../../../../../directives';
+
 @Component({
   selector: 'app-descritiva-view',
   standalone: true,
@@ -104,6 +106,7 @@ export class SampleDialog {
     MatFormFieldModule,
     MatInputModule,
     FormsModule,
+    AutoTooltipDirective,
   ],
   templateUrl: './descritiva-view.html',
   styleUrl: './descritiva-view.css',

@@ -21,6 +21,7 @@ import { DatasetStateService } from '../../../../../services/dataset-state.servi
 import { AnalysisApiService } from '../../../../../services/analysis-api.service';
 import { DatasetApiService } from '../../../../../services/dataset-api.service';
 import { AnalysisArtifact, BarChartData } from '../../../../../models';
+import { AutoTooltipDirective } from '../../../../../directives';
 
 @Component({
   selector: 'app-bar-chart-view',
@@ -40,6 +41,7 @@ import { AnalysisArtifact, BarChartData } from '../../../../../models';
     MatSlideToggleModule,
     FormsModule,
     PlotlyModule,
+    AutoTooltipDirective,
   ],
   templateUrl: './bar-chart-view.html',
   styleUrl: './bar-chart-view.css',

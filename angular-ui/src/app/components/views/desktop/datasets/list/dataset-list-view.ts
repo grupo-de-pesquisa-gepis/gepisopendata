@@ -15,6 +15,8 @@ import { message, ask } from '@tauri-apps/plugin-dialog';
 import { DatasetApiService, GithubApiService, DatasetStateService } from '../../../../../services';
 import { DatasetEntry, DatasetMetadata } from '../../../../../models';
 
+import { AutoTooltipDirective } from '../../../../../directives';
+
 @Component({
   selector: 'app-dataset-list-view',
   standalone: true,
@@ -30,6 +32,7 @@ import { DatasetEntry, DatasetMetadata } from '../../../../../models';
     MatProgressBarModule,
     MatSnackBarModule,
     RouterLink,
+    AutoTooltipDirective,
   ],
   templateUrl: './dataset-list-view.html',
   styleUrl: './dataset-list-view.css',

@@ -18,6 +18,8 @@ import { Subscription } from 'rxjs';
 import { FixedSearch } from './components/layout/fixed-search/fixed-search';
 import { SearchInPageService } from './services/search-in-page.service';
 
+import { AutoTooltipDirective } from './directives';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
@@ -32,6 +34,7 @@ import { SearchInPageService } from './services/search-in-page.service';
     MatDividerModule,
     MatExpansionModule,
     MatTooltipModule,
+    AutoTooltipDirective,
     FixedHead,
     FixedStatusbar,
     FixedSearch,

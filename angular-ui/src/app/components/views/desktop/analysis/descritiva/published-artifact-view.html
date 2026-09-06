@@ -5,7 +5,7 @@
     </button>
     
     @if (!isEditing()) {
-      <h1>{{ artifact()?.label || 'Visualizar Publicação' }}</h1>
+      <h1 appAutoTooltip>{{ artifact()?.label || 'Visualizar Publicação' }}</h1>
       @if (isDesktop()) {
         <button mat-icon-button (click)="startEdit()" matTooltip="Editar detalhes do gráfico">
           <mat-icon>edit</mat-icon>
@@ -113,7 +113,7 @@
                 <div class="category-edit-list">
                   @for (cat of artifact()?.data?.x; track cat) {
                     <div class="category-edit-row">
-                      <span class="orig-cat" [title]="cat">{{ cat }}</span>
+                      <span class="orig-cat" appAutoTooltip>{{ cat }}</span>
                       <mat-icon>arrow_forward</mat-icon>
                       <mat-form-field appearance="outline" subscriptSizing="dynamic">
                         <input matInput [placeholder]="cat" [(ngModel)]="tempXLabelMap[cat]" (ngModelChange)="updatePreview()">

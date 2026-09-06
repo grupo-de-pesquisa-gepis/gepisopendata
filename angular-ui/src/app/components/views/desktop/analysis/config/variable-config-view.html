@@ -46,7 +46,7 @@
                                (change)="toggleFile(file, $event.checked)">
                   </mat-checkbox>
                   <mat-icon>insert_drive_file</mat-icon>
-                  <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                  <span class="file-name" appAutoTooltip>{{ file.name }}</span>
                 </div>
               }
             }
@@ -136,9 +136,9 @@
               <th mat-header-cell *matHeaderCellDef>Nome</th>
               <td mat-cell *matCellDef="let row">
                 <div class="var-name-cell">
-                  <span class="var-name">{{ row.name }}</span>
+                  <span class="var-name" appAutoTooltip>{{ row.name }}</span>
                   @if (row.description) {
-                    <span class="var-description">{{ row.description }}</span>
+                    <span class="var-description" appAutoTooltip>{{ row.description }}</span>
                   }
                 </div>
               </td>

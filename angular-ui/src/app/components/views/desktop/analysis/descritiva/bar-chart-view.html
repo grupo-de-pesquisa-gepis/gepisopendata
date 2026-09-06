@@ -18,9 +18,9 @@
               <div class="slot-value">
                 <mat-icon>label</mat-icon>
                 <div class="var-details">
-                  <span class="var-name-display">{{ categoryVar() || 'Nenhuma variável' }}</span>
+                  <span class="var-name-display" appAutoTooltip>{{ categoryVar() || 'Nenhuma variável' }}</span>
                   @if (categoryDesc()) {
-                    <span class="var-description-display">{{ categoryDesc() }}</span>
+                    <span class="var-description-display" appAutoTooltip>{{ categoryDesc() }}</span>
                   }
                 </div>
               </div>
@@ -31,9 +31,9 @@
               <div class="slot-value">
                 <mat-icon>numbers</mat-icon>
                 <div class="var-details">
-                  <span class="var-name-display">{{ valueVar() || (metric() === 'count' ? 'Contagem Automática' : 'Nenhuma variável') }}</span>
+                  <span class="var-name-display" appAutoTooltip>{{ valueVar() || (metric() === 'count' ? 'Contagem Automática' : 'Nenhuma variável') }}</span>
                   @if (valueDesc()) {
-                    <span class="var-description-display">{{ valueDesc() }}</span>
+                    <span class="var-description-display" appAutoTooltip>{{ valueDesc() }}</span>
                   }
                 </div>
               </div>
@@ -78,11 +78,11 @@
                    [class.is-x]="categoryVar() === v.name" 
                    [class.is-y]="valueVar() === v.name">
                 <div class="var-info">
-                  <span class="var-name">{{ v.name }}</span>
+                  <span class="var-name" appAutoTooltip>{{ v.name }}</span>
                   <div class="var-meta">
                     <span class="var-type" [class.number]="v.type === 'Número'">{{ v.type }}</span>
                     @if (v.description) {
-                      <span class="var-desc-inline">{{ v.description }}</span>
+                      <span class="var-desc-inline" appAutoTooltip>{{ v.description }}</span>
                     }
                   </div>
                 </div>

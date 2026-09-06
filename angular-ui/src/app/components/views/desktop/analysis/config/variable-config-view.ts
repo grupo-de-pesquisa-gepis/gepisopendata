@@ -21,6 +21,8 @@ import {
   VariableSpec,
 } from '../../../../../models';
 
+import { AutoTooltipDirective } from '../../../../../directives';
+
 interface ConfigColumnInfo extends ColumnInfo {
   included?: boolean;
   description?: string;
@@ -48,6 +50,7 @@ interface FileInfo {
     MatInputModule,
     MatSnackBarModule,
     FormsModule,
+    AutoTooltipDirective,
   ],
   templateUrl: './variable-config-view.html',
   styleUrl: './variable-config-view.css',

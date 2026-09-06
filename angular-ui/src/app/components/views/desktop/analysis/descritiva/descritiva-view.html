@@ -23,8 +23,8 @@
             @for (item of stateService.allAnalyses(); track item.id) {
               <mat-list-item [class.selected]="config()?.id === item.id" (click)="selectAnalysis(item)">
                 <mat-icon matListItemIcon>history</mat-icon>
-                <span matListItemTitle>{{ item.name }}</span>
-                <span matListItemLine>{{ item.groupName }} • {{ item.variables.length }} variáveis</span>
+                <span matListItemTitle appAutoTooltip>{{ item.name }}</span>
+                <span matListItemLine appAutoTooltip>{{ item.groupName }} • {{ item.variables.length }} variáveis</span>
                 <button mat-icon-button matListItemMeta (click)="deleteAnalysis($event, item.id!)" matTooltip="Excluir">
                   <mat-icon color="warn">delete</mat-icon>
                 </button>
@@ -48,7 +48,7 @@
           <mat-card-header>
             <div class="card-header-with-actions">
               <div>
-                <mat-card-title>{{ analysisConfig.name }}</mat-card-title>
+                <mat-card-title appAutoTooltip>{{ analysisConfig.name }}</mat-card-title>
                 <mat-card-subtitle>
                   Grupo: <strong>{{ analysisConfig.groupName }}</strong> |
                   Arquivos: <strong>{{ analysisConfig.files.length }}</strong>
@@ -101,11 +101,11 @@
                 <h3>Publicações desta Análise ({{ analysisConfig.publishedArtifacts.length }}):</h3>
                 <div class="artifact-grid">
                   @for (art of analysisConfig.publishedArtifacts; track art.id) {
-                    <mat-card appearance="outlined" class="artifact-item-card" (click)="goToArtifact(analysisConfig.id!, art.id)" [matTooltip]="art.label" [title]="art.label">
+                    <mat-card appearance="outlined" class="artifact-item-card" (click)="goToArtifact(analysisConfig.id!, art.id)" [appAutoTooltip]="art.label">
                       <mat-card-content>
                         <mat-icon>{{ art.type === 'barchart' ? 'bar_chart' : 'description' }}</mat-icon>
                         <div class="art-info">
-                          <span class="art-label" [title]="art.label">{{ art.label }}</span>
+                          <span class="art-label" appAutoTooltip>{{ art.label }}</span>
                           <span class="art-date">{{ art.createdAt | date:'short' }}</span>
                         </div>
                       </mat-card-content>
@@ -133,9 +133,9 @@
                 <ng-container matColumnDef="name">
                   <th mat-header-cell *matHeaderCellDef>Nome</th>
                   <td mat-cell *matCellDef="let variable">
-                    <div class="var-name">{{ variable.name }}</div>
+                    <div class="var-name" appAutoTooltip>{{ variable.name }}</div>
                     @if (variable.description) {
-                      <div class="var-desc">{{ variable.description }}</div>
+                      <div class="var-desc" appAutoTooltip>{{ variable.description }}</div>
                     }
                   </td>
                 </ng-container>

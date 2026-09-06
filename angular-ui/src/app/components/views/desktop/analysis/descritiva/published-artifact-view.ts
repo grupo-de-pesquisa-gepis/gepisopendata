@@ -19,6 +19,7 @@ import { PlotlyModule } from 'angular-plotly.js';
 import { DatasetStateService } from '../../../../../services/dataset-state.service';
 import { isTauri } from '../../../../../services/environment';
 import { AnalysisArtifact, AnalysisConfig } from '../../../../../models';
+import { AutoTooltipDirective } from '../../../../../directives';
 
 @Component({
   selector: 'app-published-artifact-view',
@@ -37,6 +38,7 @@ import { AnalysisArtifact, AnalysisConfig } from '../../../../../models';
     MatTooltipModule,
     FormsModule,
     PlotlyModule,
+    AutoTooltipDirective,
   ],
   templateUrl: './published-artifact-view.html',
   styleUrl: './published-artifact-view.css',
