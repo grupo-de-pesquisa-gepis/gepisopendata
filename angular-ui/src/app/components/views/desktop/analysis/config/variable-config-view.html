@@ -1,0 +1,175 @@
+<div class="container">
+  <div class="header">
+    <button mat-icon-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>Configurar Variáveis: {{ groupName() }}</h1>
+  </div>
+
+  <div class="content-grid">
+    <div class="left-panel">
+      <mat-card appearance="outlined" class="config-meta-card">
+        <mat-card-header>
+          <mat-card-title>Nome da Análise</mat-card-title>
+          <mat-card-subtitle>Identifique esta configuração para uso futuro</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Nome da Análise</mat-label>
+            <input matInput [(ngModel)]="analysisName" placeholder="Ex: Análise de Saúde - Set/2024" />
+          </mat-form-field>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined" class="files-card">
+        <mat-card-header>
+          <mat-card-title>Arquivos Encontrados ({{ files().length }})</mat-card-title>
+          <mat-card-subtitle>
+            Tipo de dado: <strong class="format-badge">{{ format() | uppercase }}</strong>
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="file-list">
+            @if (isLoadingFiles()) {
+              <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            } @else {
+              <div class="file-list-actions">
+                <mat-checkbox (change)="toggleAllFiles($event.checked)"
+                              [checked]="isAllFilesSelected()"
+                              [indeterminate]="isSomeFilesSelected()">
+                  Selecionar Todos
+                </mat-checkbox>
+              </div>
+              @for (file of files(); track file.name) {
+                <div class="file-item">
+                  <mat-checkbox [checked]="file.selected"
+                               (change)="toggleFile(file, $event.checked)">
+                  </mat-checkbox>
+                  <mat-icon>insert_drive_file</mat-icon>
+                  <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                </div>
+              }
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined" class="dictionary-card">
+        <mat-card-header>
+          <mat-card-title>Dicionário de Dados</mat-card-title>
+          <mat-card-subtitle>Descrições e tipos oficiais</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Arquivo de Dicionário</mat-label>
+            <mat-select [(ngModel)]="selectedDictionary" (selectionChange)="onDictionaryChange()">
+              <mat-option [value]="null">Nenhum</mat-option>
+              @for (dict of excelFiles(); track $index) {
+                <mat-option [value]="dict">{{ dict }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (isLoadingDictionary()) {
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <mat-card appearance="outlined" class="columns-card">
+      <mat-card-header>
+        <mat-card-title>Variáveis Identificadas</mat-card-title>
+        <mat-card-subtitle>
+          @if (selectedFilesCount() === 0) {
+            Selecione arquivos para ver colunas.
+          } @else {
+            Presentes em {{ selectedFilesCount() }} arquivo(s).
+            <div class="header-info">
+              <mat-icon>info</mat-icon>
+              <span>Considerando a <strong>primeira linha</strong> como cabeçalho</span>
+            </div>
+          }
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="table-actions-top" *ngIf="columns().length > 0">
+          <div class="selection-info">
+            <strong>{{ selectedCount() }}</strong> selecionadas
+          </div>
+
+          <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+            <mat-icon matPrefix>search</mat-icon>
+            <mat-label>Filtrar variáveis...</mat-label>
+            <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Nome ou descrição" />
+            <button *ngIf="searchQuery()" matSuffix mat-icon-button (click)="searchQuery.set('')">
+              <mat-icon>close</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <button mat-raised-button color="primary" [disabled]="selectedCount() === 0" (click)="saveConfig()">
+            Salvar e Ir para Análises
+            <mat-icon>assessment</mat-icon>
+          </button>
+        </div>
+
+        @if (isLoadingColumns()) {
+          <div class="loading-state">
+            <mat-progress-bar mode="query"></mat-progress-bar>
+          </div>
+        } @else {
+          <table mat-table [dataSource]="filteredColumns()" class="full-width-table">
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox (change)="$event ? toggleAll() : null"
+                              [checked]="isAllSelected()">
+                </mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let row">
+                <mat-checkbox (change)="$event ? toggleRow(row) : null"
+                              [checked]="row.included">
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Nome</th>
+              <td mat-cell *matCellDef="let row">
+                <div class="var-name-cell">
+                  <span class="var-name">{{ row.name }}</span>
+                  @if (row.description) {
+                    <span class="var-description">{{ row.description }}</span>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef>Tipo Primitivo</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="type-badge" [class.number]="row.type === 'Número'">{{ row.type }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="statisticalType">
+              <th mat-header-cell *matHeaderCellDef>Classificação Estatística</th>
+              <td mat-cell *matCellDef="let row">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="stat-type-select" *ngIf="row.included">
+                  <mat-select [(ngModel)]="row.statisticalType">
+                    @for (type of statisticalTypes; track type.value) {
+                      <mat-option [value]="type.value">{{ type.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <span class="type-placeholder" *ngIf="!row.included">-</span>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.row-excluded]="!row.included"></tr>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

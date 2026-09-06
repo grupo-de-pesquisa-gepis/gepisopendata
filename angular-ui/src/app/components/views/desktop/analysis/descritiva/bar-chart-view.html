@@ -1,0 +1,145 @@
+<div class="container">
+  <div class="header">
+    <button mat-icon-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>Gráficos de Barras</h1>
+  </div>
+
+  <div class="content-grid">
+    <!-- Configuration Panel -->
+    <div class="config-panel">
+      <!-- Selection Summary -->
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <div class="selection-summary">
+            <div class="selection-slot" [class.active]="categoryVar()">
+              <span class="slot-label">Eixo X (Categorias)</span>
+              <div class="slot-value">
+                <mat-icon>label</mat-icon>
+                <div class="var-details">
+                  <span class="var-name-display">{{ categoryVar() || 'Nenhuma variável' }}</span>
+                  @if (categoryDesc()) {
+                    <span class="var-description-display">{{ categoryDesc() }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+            
+            <div class="selection-slot" [class.active]="valueVar()">
+              <span class="slot-label">Eixo Y (Valores)</span>
+              <div class="slot-value">
+                <mat-icon>numbers</mat-icon>
+                <div class="var-details">
+                  <span class="var-name-display">{{ valueVar() || (metric() === 'count' ? 'Contagem Automática' : 'Nenhuma variável') }}</span>
+                  @if (valueDesc()) {
+                    <span class="var-description-display">{{ valueDesc() }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-selector">
+            <span class="slot-label">Operação Estatística</span>
+            <mat-button-toggle-group [(ngModel)]="metric" (change)="updateChart()" class="full-width">
+              <mat-button-toggle value="count">Frequência</mat-button-toggle>
+              <mat-button-toggle value="sum">Soma</mat-button-toggle>
+              <mat-button-toggle value="avg">Média</mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+
+          <div class="options-selector">
+            <mat-slide-toggle [checked]="showBarValues()" (change)="toggleBarValues($event.checked)">
+              Mostrar valores nas barras
+            </mat-slide-toggle>
+          </div>
+
+          <button mat-flat-button color="accent" class="publish-btn" [disabled]="!categoryVar()" (click)="publishArtifact()">
+            <mat-icon>publish</mat-icon> Publicar este Gráfico
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Variable Selection List -->
+      <mat-card appearance="outlined" class="variable-list-card">
+        <mat-card-header>
+          <mat-card-title>Selecione as Variáveis</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full-width search-field" subscriptSizing="dynamic">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Filtrar variáveis...">
+          </mat-form-field>
+
+          <div class="variable-list">
+            @for (v of filteredVariables(); track v.name) {
+              <div class="variable-row" 
+                   [class.is-x]="categoryVar() === v.name" 
+                   [class.is-y]="valueVar() === v.name">
+                <div class="var-info">
+                  <span class="var-name">{{ v.name }}</span>
+                  <div class="var-meta">
+                    <span class="var-type" [class.number]="v.type === 'Número'">{{ v.type }}</span>
+                    @if (v.description) {
+                      <span class="var-desc-inline">{{ v.description }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="var-actions">
+                  <button mat-icon-button (click)="setX(v.name)" 
+                          [color]="categoryVar() === v.name ? 'primary' : ''"
+                          matTooltip="Usar no Eixo X">
+                    <mat-icon>align_horizontal_left</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="setY(v.name)" 
+                          [color]="valueVar() === v.name ? 'primary' : ''"
+                          matTooltip="Usar no Eixo Y">
+                    <mat-icon>align_vertical_bottom</mat-icon>
+                  </button>
+                </div>
+              </div>
+              <mat-divider></mat-divider>
+            }
+            @if (filteredVariables().length === 0) {
+              <div class="empty-list">Nenhuma variável encontrada.</div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Preview -->
+    <mat-card appearance="outlined" class="preview-card">
+      <mat-card-header>
+        <mat-card-title>Visualização</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (isLoading()) {
+          <div class="loading-state">
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            <p>Calculando métricas via Polars...</p>
+          </div>
+        }
+        
+        @if (graphData && !isLoading()) {
+          <plotly-plot 
+            [data]="graphData.data" 
+            [layout]="graphData.layout" 
+            [config]="graphData.config"
+            [useResizeHandler]="true"
+            class="chart-container">
+          </plotly-plot>
+        }
+
+        @if (!categoryVar() && !isLoading()) {
+          <div class="empty-preview">
+            <mat-icon>bar_chart</mat-icon>
+            <p>Selecione as variáveis à esquerda para visualizar o gráfico.</p>
+            <small>Escolha uma variável para o <strong>Eixo X</strong> para começar.</small>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

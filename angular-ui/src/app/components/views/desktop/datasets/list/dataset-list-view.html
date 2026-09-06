@@ -1,0 +1,116 @@
+<div class="container">
+  <div class="header">
+    <h1>Conjuntos de Dados Registrados</h1>
+    <p>Visualize e gerencie os arquivos baixados e seus metadados.</p>
+  </div>
+
+  @if (groupedDatasets().length === 0) {
+    <mat-card class="empty-state">
+      <mat-card-content>
+        <mat-icon>folder_off</mat-icon>
+        <p>Nenhum conjunto de dados encontrado.</p>
+        <button mat-stroked-button color="primary" routerLink="/desktop/datasets/get">
+          Baixar meu primeiro dataset
+        </button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <mat-accordion multi>
+      @for (group of groupedDatasets(); track group.name) {
+        <mat-expansion-panel [expanded]="true">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon>folder</mat-icon>
+              <strong>Grupo: {{ group.name || 'Sem Grupo' }}</strong>
+            </mat-panel-title>
+            <mat-panel-description>
+              {{ group.items.length }} dataset(s) nesta coleção
+              <button mat-icon-button color="warn" matTooltip="Excluir todo o grupo" (click)="deleteGroup($event, group.name)">
+                <mat-icon>delete_sweep</mat-icon>
+              </button>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="dataset-grid">
+            @for (item of group.items; track item.id) {
+              <mat-card class="dataset-card" [class.missing]="item.exists === false" appearance="outlined">
+                <mat-card-header>
+                  <div mat-card-avatar class="format-icon">
+                    {{ item.formato | uppercase }}
+                  </div>
+                  <mat-card-title>
+                    {{ item.tituloCurto }}
+                    @if (item.exists === false) {
+                      <mat-icon color="warn" matTooltip="Arquivos locais não encontrados" class="status-icon">warning</mat-icon>
+                    }
+                  </mat-card-title>
+                  <mat-card-subtitle>{{ item.orgaoEmissao }} - Ref: {{ item.dataReferencia }}</mat-card-subtitle>
+                </mat-card-header>
+
+                <mat-card-content>
+                  <p class="description">{{ item.tituloLongo }}</p>
+
+                  <div class="meta-row">
+                    <span class="meta-item">
+                      <mat-icon inline>schedule</mat-icon> {{ item.frequencia || 'Anual' }}
+                    </span>
+                    @if (item.licenca) {
+                      <span class="meta-item">
+                        <mat-icon inline>policy</mat-icon> {{ item.licenca }}
+                      </span>
+                    }
+                  </div>
+
+                  @if (item.files && item.files.length > 0) {
+                    <div class="file-list">
+                      <div class="small-label">Arquivos ({{ item.files.length }}):</div>
+                      <mat-chip-set>
+                        @for (file of item.files; track file) {
+                          <mat-chip class="file-chip">
+                            {{ file }}
+                          </mat-chip>
+                        }
+                      </mat-chip-set>
+                    </div>
+                  }
+
+                  @if (isRedownloading() === item.id) {
+                    <div class="redownload-progress">
+                      <p>Baixando e extraindo novamente...</p>
+                      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                    </div>
+                  }
+                </mat-card-content>
+
+                <mat-card-actions align="end">
+                  @if (item.localPath) {
+                    <button mat-icon-button (click)="openFolder(item.localPath)" matTooltip="Abrir Pasta Local">
+                      <mat-icon>folder_open</mat-icon>
+                    </button>
+                  }
+                  @if (item.urls) {
+                    <button mat-icon-button (click)="openUrl(item.urls)" matTooltip="Abrir URL Fonte">
+                      <mat-icon>open_in_new</mat-icon>
+                    </button>
+                  }
+                  @if (item.exists === false && item.urls) {
+                    <button mat-button color="warn" (click)="redownload(item)" [disabled]="isRedownloading() === item.id">
+                      <mat-icon>refresh</mat-icon> Baixar Novamente
+                    </button>
+                  }
+                  <span class="spacer"></span>
+                  <button mat-icon-button color="accent" matTooltip="Colaborar no GitHub" (click)="collaborate(item)" [disabled]="isCollaborating() === item.id">
+                    <mat-icon>cloud_upload</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="deleteDataset(item)" matTooltip="Excluir Dataset">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+          </div>
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+  }
+</div>
