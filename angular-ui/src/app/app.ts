@@ -111,6 +111,9 @@ export class App implements OnInit, OnDestroy {
       case 'config_colaboracao':
         route = '/desktop/settings/collaboration';
         break;
+      case 'list_pull_requests':
+        route = '/desktop/settings/pull-requests';
+        break;
       default:
         console.warn(`Unrecognized menu ID: ${menuId}`);
         return;

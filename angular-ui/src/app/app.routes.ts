@@ -84,6 +84,13 @@ export const routes: Routes = [
             (m) => m.CollaborationSettingsView
           ),
       },
+      {
+        path: 'settings/pull-requests',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/pull-requests/pull-requests-list-view').then(
+            (m) => m.PullRequestsListView
+          ),
+      },
     ],
   },
 ];

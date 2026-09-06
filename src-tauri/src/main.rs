@@ -62,7 +62,8 @@ fn main() {
             save_github_config,
             test_github_connection,
             push_dataset_to_github,
-            publish_analysis
+            publish_analysis,
+            list_pull_requests
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();

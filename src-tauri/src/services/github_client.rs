@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use base64::{engine::general_purpose, Engine as _};
-use crate::models::GithubConfig;
+use crate::models::{GithubConfig, PullRequestInfo};
 
 /// Cliente de Integração com a API REST do GitHub (100% Puro Rust).
 pub struct GithubClient;
@@ -300,5 +300,79 @@ impl GithubClient {
         let pr_html = pr_json["html_url"].as_str().unwrap_or("").to_string();
 
         Ok(pr_html)
+    }
+
+    /// Lista os Pull Requests do repositório configurado no GitHub.
+    pub async fn list_pull_requests(
+        config: &GithubConfig,
+        state: Option<&str>,
+    ) -> Result<Vec<PullRequestInfo>, String> {
+        let client = reqwest::Client::builder()
+            .user_agent("Gepis-OpenData-App")
+            .build()
+            .map_err(|e| e.to_string())?;
+
+        let state_param = state.unwrap_or("all");
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/pulls?state={}&per_page=50",
+            config.owner, config.repo, state_param
+        );
+
+        let mut req = client.get(&url);
+        if !config.token.is_empty() {
+            req = req.header("Authorization", format!("token {}", config.token));
+        }
+
+        let response = req.send().await.map_err(|e| e.to_string())?;
+
+        if !response.status().is_success() {
+            return Err(format!(
+                "Falha ao listar Pull Requests (HTTP {}). Verifique as configurações do repositório.",
+                response.status()
+            ));
+        }
+
+        let raw_prs: Vec<serde_json::Value> = response.json().await.map_err(|e| e.to_string())?;
+
+        let prs = raw_prs
+            .into_iter()
+            .map(|item| {
+                let id = item["id"].as_u64().unwrap_or(0);
+                let number = item["number"].as_u64().unwrap_or(0);
+                let title = item["title"].as_str().unwrap_or("").to_string();
+                let body = item["body"].as_str().map(|s| s.to_string());
+                let state = item["state"].as_str().unwrap_or("open").to_string();
+                let html_url = item["html_url"].as_str().unwrap_or("").to_string();
+                let user_login = item["user"]["login"].as_str().unwrap_or("").to_string();
+                let user_avatar = item["user"]["avatar_url"].as_str().map(|s| s.to_string());
+                let created_at = item["created_at"].as_str().unwrap_or("").to_string();
+                let updated_at = item["updated_at"].as_str().map(|s| s.to_string());
+                let closed_at = item["closed_at"].as_str().map(|s| s.to_string());
+                let merged_at = item["merged_at"].as_str().map(|s| s.to_string());
+                let is_draft = item["draft"].as_bool().unwrap_or(false);
+                let head_ref = item["head"]["ref"].as_str().map(|s| s.to_string());
+                let base_ref = item["base"]["ref"].as_str().map(|s| s.to_string());
+
+                PullRequestInfo {
+                    id,
+                    number,
+                    title,
+                    body,
+                    state,
+                    html_url,
+                    user_login,
+                    user_avatar,
+                    created_at,
+                    updated_at,
+                    closed_at,
+                    merged_at,
+                    is_draft,
+                    head_ref,
+                    base_ref,
+                }
+            })
+            .collect();
+
+        Ok(prs)
     }
 }

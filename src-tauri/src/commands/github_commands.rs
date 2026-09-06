@@ -61,3 +61,15 @@ pub async fn publish_analysis(app_handle: AppHandle, id: Option<String>) -> Resu
 
     GithubClient::publish_analysis(&config, &history, id.as_deref()).await
 }
+
+#[tauri::command]
+pub async fn list_pull_requests(
+    app_handle: AppHandle,
+    state: Option<String>,
+) -> Result<Vec<crate::models::PullRequestInfo>, String> {
+    let config = get_github_config(app_handle.clone())
+        .await?
+        .ok_or("Configuração do GitHub não encontrada. Vá em Configurações > Colaboração > Config Github.")?;
+
+    GithubClient::list_pull_requests(&config, state.as_deref()).await
+}

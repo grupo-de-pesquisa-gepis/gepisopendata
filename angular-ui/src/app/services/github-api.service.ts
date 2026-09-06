@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from './environment';
-import { GithubConfig } from '../models';
+import { GithubConfig, PullRequestInfo } from '../models';
 
 @Injectable({
   providedIn: 'root',
@@ -40,5 +40,12 @@ export class GithubApiService {
       throw new Error('Publicação no GitHub não suportada no modo Web.');
     }
     return await invoke<string>('publish_analysis', { id: id ?? null });
+  }
+
+  async listPullRequests(state: string = 'all'): Promise<PullRequestInfo[]> {
+    if (!isTauri()) {
+      return [];
+    }
+    return await invoke<PullRequestInfo[]>('list_pull_requests', { state });
   }
 }

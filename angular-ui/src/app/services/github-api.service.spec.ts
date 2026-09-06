@@ -22,14 +22,19 @@ describe('GithubApiService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should return null or default when getGithubConfig is called in web mode', async () => {
+  it('should return null when getGithubConfig is called in web mode', async () => {
     const config = await service.getGithubConfig();
     expect(config).toBeNull();
   });
 
-  it('should return default connection failure in web mode', async () => {
-    const result = await service.testConnection('fake-token', 'owner', 'repo');
-    expect(result.success).toBeFalse();
-    expect(result.message).toContain('não é suportado no modo Web');
+  it('should throw error when testConnection is called in web mode', async () => {
+    await expectAsync(service.testConnection('fake-token', 'owner', 'repo')).toBeRejectedWithError(
+      /Teste de conexão do GitHub não suportado no modo Web/
+    );
+  });
+
+  it('should return empty list when listPullRequests is called in web mode', async () => {
+    const prs = await service.listPullRequests();
+    expect(prs).toEqual([]);
   });
 });
