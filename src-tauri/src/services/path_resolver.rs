@@ -1,6 +1,5 @@
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
-use tauri::Manager;
 
 /// Sanitiza strings para uso seguro como nomes de pastas e arquivos.
 pub fn sanitize_filename(name: &str) -> String {
@@ -54,23 +53,22 @@ pub fn find_files_recursive(dir: &Path, extension: &str, files: &mut Vec<PathBuf
 }
 
 /// Retorna o diretório base de downloads da aplicação de forma portável (considerando dev e prod).
-pub fn get_base_downloads_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let mut path = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
-    #[cfg(debug_assertions)]
+pub fn get_base_downloads_path(app_data_dir: &Path) -> PathBuf {
+    #[cfg(all(debug_assertions, not(test)))]
     {
         if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
-            path = PathBuf::from(manifest_dir).join("downloads");
+            return PathBuf::from(manifest_dir).join("downloads");
         }
     }
-    Ok(path)
+    app_data_dir.to_path_buf()
 }
 
 /// Retorna todos os caminhos onde o arquivo de registro JSON deve ser sincronizado (Dual-write dev/prod).
-pub fn get_registry_paths(app_handle: &tauri::AppHandle, filename: &str) -> Result<Vec<PathBuf>, String> {
-    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+pub fn get_registry_paths(app_data_dir: &Path, filename: &str) -> Vec<PathBuf> {
+    #[allow(unused_mut)]
     let mut paths = vec![app_data_dir.join(filename)];
 
-    #[cfg(debug_assertions)]
+    #[cfg(all(debug_assertions, not(test)))]
     {
         if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
             let base = PathBuf::from(manifest_dir);
@@ -79,15 +77,12 @@ pub fn get_registry_paths(app_handle: &tauri::AppHandle, filename: &str) -> Resu
         }
     }
 
-    Ok(paths)
+    paths
 }
 
 /// Retorna o caminho preferencial para leitura do arquivo de registro.
-pub fn get_primary_registry_path(app_handle: &tauri::AppHandle, filename: &str) -> Result<PathBuf, String> {
-    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
-    let mut path = app_data_dir.join(filename);
-
-    #[cfg(debug_assertions)]
+pub fn get_primary_registry_path(app_data_dir: &Path, filename: &str) -> PathBuf {
+    #[cfg(all(debug_assertions, not(test)))]
     {
         if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
             let dev_path = PathBuf::from(manifest_dir)
@@ -96,12 +91,12 @@ pub fn get_primary_registry_path(app_handle: &tauri::AppHandle, filename: &str) 
                 .join("data")
                 .join(filename);
             if dev_path.exists() {
-                path = dev_path;
+                return dev_path;
             }
         }
     }
 
-    Ok(path)
+    app_data_dir.join(filename)
 }
 
 /// Resolve o caminho absoluto de destino de um dataset a partir do grupo e título curto.
@@ -113,4 +108,51 @@ pub fn resolve_dataset_dir(base_downloads_path: &Path, grupo: &str, titulo_curto
     };
     let dataset_folder = sanitize_filename(titulo_curto);
     base_downloads_path.join("datasets").join(grupo_folder).join(dataset_folder)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_sanitize_filename() {
+        assert_eq!(sanitize_filename("Censo Escolar 2023!"), "censo_escolar_2023_");
+        assert_eq!(sanitize_filename("dados-abertos_v1"), "dados-abertos_v1");
+        assert_eq!(sanitize_filename("A/B/C"), "a_b_c");
+    }
+
+    #[test]
+    fn test_resolve_dataset_dir() {
+        let base = PathBuf::from("/tmp/downloads");
+        let dir = resolve_dataset_dir(&base, "Censo Escolar", "2023");
+        assert_eq!(dir, PathBuf::from("/tmp/downloads/datasets/censo_escolar/2023"));
+
+        let dir_empty_group = resolve_dataset_dir(&base, "", "2023");
+        assert_eq!(dir_empty_group, PathBuf::from("/tmp/downloads/datasets/sem-grupo/2023"));
+    }
+
+    #[test]
+    fn test_detect_delimiter_from_file() {
+        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let csv_semi = temp_dir.join("semi.csv");
+        let mut f1 = File::create(&csv_semi).unwrap();
+        writeln!(f1, "col1;col2;col3\nval1;val2;val3").unwrap();
+
+        let csv_comma = temp_dir.join("comma.csv");
+        let mut f2 = File::create(&csv_comma).unwrap();
+        writeln!(f2, "col1,col2,col3\nval1,val2,val3").unwrap();
+
+        let csv_tab = temp_dir.join("tab.tsv");
+        let mut f3 = File::create(&csv_tab).unwrap();
+        writeln!(f3, "col1\tcol2\tcol3\nval1\tval2\tval3").unwrap();
+
+        assert_eq!(detect_delimiter_from_file(&csv_semi), b';');
+        assert_eq!(detect_delimiter_from_file(&csv_comma), b',');
+        assert_eq!(detect_delimiter_from_file(&csv_tab), b'\t');
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
 }

@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use crate::models::{ColumnInfo, DictionaryEntry, GroupAnalysis};
 use crate::services::{
     path_resolver,
@@ -18,16 +18,17 @@ pub async fn download_dataset(
     tracing::info!("Starting download_dataset: url={}", url);
     println!("Rust => Processing download for: {}", url);
 
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
     let titulo_curto = metadata["tituloCurto"].as_str().unwrap_or("sem-titulo");
     let grupo = metadata["grupo"].as_str().unwrap_or("sem-grupo");
     let formato_esperado = metadata["formato"].as_str().unwrap_or("outro").to_lowercase();
 
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     let target_dir = path_resolver::resolve_dataset_dir(&base_downloads_path, grupo, titulo_curto);
 
     let final_files = Downloader::download_and_extract(&url, &target_dir, &formato_esperado).await?;
 
-    RegistryRepo::save_dataset(&app_handle, metadata, &final_files, &target_dir)?;
+    RegistryRepo::save_dataset(&app_data_dir, metadata, &final_files, &target_dir)?;
 
     let file_name = url.split('/').last().unwrap_or("dataset.zip");
     tracing::info!("Dataset downloaded and registered successfully: {}", file_name);
@@ -42,27 +43,30 @@ pub async fn import_local_dataset(
 ) -> Result<String, String> {
     tracing::info!("Starting import_local_dataset: files={:?}", file_paths);
 
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
     let titulo_curto = metadata["tituloCurto"].as_str().unwrap_or("sem-titulo");
     let grupo = metadata["grupo"].as_str().unwrap_or("sem-grupo");
 
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     let target_dir = path_resolver::resolve_dataset_dir(&base_downloads_path, grupo, titulo_curto);
 
     let final_files = Downloader::import_local_files(&file_paths, &target_dir)?;
 
-    RegistryRepo::save_dataset(&app_handle, metadata, &final_files, &target_dir)?;
+    RegistryRepo::save_dataset(&app_data_dir, metadata, &final_files, &target_dir)?;
 
     Ok(format!("{} arquivos importados com sucesso!", final_files.len()))
 }
 
 #[tauri::command]
 pub async fn get_registry(app_handle: AppHandle) -> Result<Vec<serde_json::Value>, String> {
-    RegistryRepo::load_datasets(&app_handle)
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    RegistryRepo::load_datasets(&app_data_dir)
 }
 
 #[tauri::command]
 pub async fn delete_dataset(app_handle: AppHandle, id: String) -> Result<(), String> {
-    RegistryRepo::delete_dataset(app_handle, &id)
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    RegistryRepo::delete_dataset(&app_data_dir, &id)
 }
 
 #[tauri::command]
@@ -70,7 +74,8 @@ pub async fn delete_group(app_handle: AppHandle, mut group_name: String) -> Resu
     if group_name == "Sem Grupo" {
         group_name = "".to_string();
     }
-    RegistryRepo::delete_group(&app_handle, &group_name)
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    RegistryRepo::delete_group(&app_data_dir, &group_name)
 }
 
 #[tauri::command]
@@ -80,7 +85,8 @@ pub async fn check_path_exists(path: String) -> bool {
 
 #[tauri::command]
 pub async fn get_excel_files(app_handle: AppHandle, group_name: String) -> Result<Vec<String>, String> {
-    let registry = RegistryRepo::load_datasets(&app_handle)?;
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let registry = RegistryRepo::load_datasets(&app_data_dir)?;
     let group_items: Vec<_> = registry
         .into_iter()
         .filter(|item| item["grupo"].as_str().unwrap_or("") == group_name)
@@ -90,7 +96,7 @@ pub async fn get_excel_files(app_handle: AppHandle, group_name: String) -> Resul
         return Err("Grupo não encontrado".into());
     }
 
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     let mut excel_files = std::collections::HashSet::new();
 
     for item in group_items {
@@ -126,13 +132,14 @@ pub async fn parse_dictionary(
     group_name: String,
     file_name: String,
 ) -> Result<Vec<DictionaryEntry>, String> {
-    let registry = RegistryRepo::load_datasets(&app_handle)?;
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let registry = RegistryRepo::load_datasets(&app_data_dir)?;
     let group_items: Vec<_> = registry
         .into_iter()
         .filter(|item| item["grupo"].as_str().unwrap_or("") == group_name)
         .collect();
 
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     let mut full_path = None;
 
     for item in &group_items {
@@ -159,8 +166,9 @@ pub async fn get_group_columns(
     app_handle: AppHandle,
     group_name: String,
 ) -> Result<Vec<serde_json::Value>, String> {
-    let registry_path = path_resolver::get_primary_registry_path(&app_handle, "datasets-registry.json")?;
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let registry_path = path_resolver::get_primary_registry_path(&app_data_dir, "datasets-registry.json");
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     EtlService::get_group_columns(&registry_path, &base_downloads_path, &group_name)
 }
 
@@ -169,8 +177,9 @@ pub async fn analyze_group(
     app_handle: AppHandle,
     group_name: String,
 ) -> Result<GroupAnalysis, String> {
-    let registry_path = path_resolver::get_primary_registry_path(&app_handle, "datasets-registry.json")?;
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let registry_path = path_resolver::get_primary_registry_path(&app_data_dir, "datasets-registry.json");
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     EtlService::analyze_group(&registry_path, &base_downloads_path, &group_name)
 }
 
@@ -180,7 +189,8 @@ pub async fn get_columns_for_files(
     group_name: String,
     files: Vec<String>,
 ) -> Result<Vec<ColumnInfo>, String> {
-    let registry_path = path_resolver::get_primary_registry_path(&app_handle, "datasets-registry.json")?;
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let registry_path = path_resolver::get_primary_registry_path(&app_data_dir, "datasets-registry.json");
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
     EtlService::get_columns_for_files(&registry_path, &base_downloads_path, &group_name, &files)
 }

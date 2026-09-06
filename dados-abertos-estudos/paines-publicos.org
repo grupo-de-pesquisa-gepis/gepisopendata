@@ -1,6 +1,28 @@
 #+TITLE: Inventário de Portais e Bases de Dados Abertos da Educação Brasileira
-#+AUTHOR: Copilot
+#+AUTHOR: Copilot e Eu
 #+DATE: 2026-09-03
+
+https://download.geofabrik.de/south-america/brazil.html
+
+https://overpass-turbo.eu/
+
+https://download.geofabrik.de/
+
+https://paineis.inep.gov.br/SASVisualAnalytics/?reportUri=%2Freports%2Freports%2Feacbc0fd-456f-49eb-9470-623acdecd495&sso_guest=true&reportViewOnly=true&reportContextBar=false&sas-welcome=false
+
+https://educacenso.inep.gov.br/
+
+https://paineis.inep.gov.br/SASVisualAnalytics/
+
+https://censobasico.inep.gov.br/censobasico_2024/#/
+
+https://api.simet.nic.br/geo-escolas/
+
+https://educacenso.inep.gov.br/
+
+https://api.simet.nic.br/educacao-instalada/
+
+https://api.simet.nic.br/educacao-instalada/
 
 * Objetivo
 

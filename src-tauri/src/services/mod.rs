@@ -6,7 +6,9 @@ pub mod dictionary_parser;
 pub mod etl_service;
 pub mod github_client;
 
+#[allow(unused_imports)]
 pub use path_resolver::*;
+#[allow(unused_imports)]
 pub use persistence::JsonStore;
 pub use registry_repo::RegistryRepo;
 pub use downloader::Downloader;

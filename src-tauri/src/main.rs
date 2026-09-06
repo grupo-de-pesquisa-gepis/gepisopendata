@@ -8,7 +8,29 @@ mod app_menu;
 mod logging;
 
 use commands::*;
+use std::fs;
 use tauri::Manager;
+
+fn init_app_data(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let app_data_dir = app.path().app_data_dir()?;
+    if !app_data_dir.exists() {
+        fs::create_dir_all(&app_data_dir)?;
+    }
+
+    let files_to_copy = ["datasets-registry.json", "analyses-history.json"];
+    for file_name in files_to_copy {
+        let dest_path = app_data_dir.join(file_name);
+        if !dest_path.exists() {
+            let resource_path = format!("angular-ui/public/data/{}", file_name);
+            if let Ok(content) = app.path().resolve(&resource_path, tauri::path::BaseDirectory::Resource) {
+                if content.exists() {
+                    let _ = fs::copy(content, dest_path);
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
 fn main() {
     tauri::Builder::default()
@@ -50,7 +72,7 @@ fn main() {
                 tracing::info!("Application started - Gepis Dados Abertos v0.1.2");
             }
 
-            if let Err(e) = services::RegistryRepo::initialize_app_data(app) {
+            if let Err(e) = init_app_data(app) {
                 eprintln!("Failed to initialize app data: {}", e);
             }
 

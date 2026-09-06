@@ -1,6 +1,5 @@
 use std::path::Path;
-use tauri::AppHandle;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 use crate::models::BarChartData;
 use crate::services::{path_resolver, EtlService, RegistryRepo};
 
@@ -12,8 +11,8 @@ pub async fn run_etl(
     columns: Vec<String>,
 ) -> Result<String, String> {
     let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
-    let base_downloads_path = path_resolver::get_base_downloads_path(&app_handle)?;
-    let registry_path = path_resolver::get_primary_registry_path(&app_handle, "datasets-registry.json")?;
+    let base_downloads_path = path_resolver::get_base_downloads_path(&app_data_dir);
+    let registry_path = path_resolver::get_primary_registry_path(&app_data_dir, "datasets-registry.json");
 
     EtlService::run_etl(
         &app_data_dir,
@@ -49,14 +48,16 @@ pub async fn save_analysis(
     app_handle: AppHandle,
     config: serde_json::Value,
 ) -> Result<(), String> {
-    RegistryRepo::save_analysis(&app_handle, config)
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    RegistryRepo::save_analysis(&app_data_dir, config)
 }
 
 #[tauri::command]
 pub async fn get_analyses(
     app_handle: AppHandle,
 ) -> Result<Vec<serde_json::Value>, String> {
-    RegistryRepo::load_analyses(&app_handle)
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    RegistryRepo::load_analyses(&app_data_dir)
 }
 
 #[tauri::command]
@@ -64,5 +65,6 @@ pub async fn delete_analysis(
     app_handle: AppHandle,
     id: String,
 ) -> Result<(), String> {
-    RegistryRepo::delete_analysis(&app_handle, &id)
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    RegistryRepo::delete_analysis(&app_data_dir, &id)
 }
