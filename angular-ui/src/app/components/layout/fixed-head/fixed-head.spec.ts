@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 import { FixedHead } from './fixed-head';
 
@@ -8,7 +9,8 @@ describe('FixedHead', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FixedHead]
+      imports: [FixedHead],
+      providers: [provideZonelessChangeDetection()]
     })
     .compileComponents();
 

@@ -22,6 +22,7 @@ export interface PullRequestInfo {
   isDraft: boolean;
   headRef?: string;
   baseRef?: string;
+  labels?: string[];
 }
 
 export interface ConnectionTestResult {

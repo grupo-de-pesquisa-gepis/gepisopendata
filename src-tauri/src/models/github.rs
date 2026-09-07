@@ -32,4 +32,6 @@ pub struct PullRequestInfo {
     pub is_draft: bool,
     pub head_ref: Option<String>,
     pub base_ref: Option<String>,
+    #[serde(default)]
+    pub labels: Vec<String>,
 }

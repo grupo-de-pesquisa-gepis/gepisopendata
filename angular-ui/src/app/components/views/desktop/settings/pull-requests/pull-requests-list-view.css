@@ -58,6 +58,21 @@
   flex-wrap: wrap;
 }
 
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.type-toggle-group mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
 .search-field {
   min-width: 320px;
 }
@@ -158,6 +173,69 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.category-badge mat-icon {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+}
+
+.category-badge.type-analysis {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.category-badge.type-dataset {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.category-badge.type-sync {
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffe0b2;
+}
+
+.category-badge.type-other {
+  background: #f5f5f5;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+}
+
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: #ede7f6;
+  color: #512da8;
+  border: 1px solid #d1c4e9;
+  white-space: nowrap;
+}
+
+.group-chip mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: #673ab7;
 }
 
 .pr-number {
@@ -183,6 +261,23 @@
   font-size: 0.85rem;
   color: #616161;
   flex-wrap: wrap;
+}
+
+.labels-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.github-label-chip {
+  background: #f1f3f4;
+  color: #3c4043;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid #dadce0;
 }
 
 .user-avatar {

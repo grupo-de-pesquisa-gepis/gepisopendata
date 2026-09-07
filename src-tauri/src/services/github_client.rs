@@ -238,9 +238,18 @@ impl GithubClient {
             None
         };
 
-        // 2) Criar nome da branch
+        // 2) Criar nome da branch semântico e único
         let branch = if let Some(info) = analysis_info {
             let name = info["name"].as_str().unwrap_or("unknown");
+            let group = info["groupName"].as_str().unwrap_or("geral");
+            let sanitized_group = group.to_lowercase()
+                .chars()
+                .map(|c| if c.is_alphanumeric() { c } else { '-' })
+                .collect::<String>()
+                .split('-')
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join("-");
             let sanitized_name = name.to_lowercase()
                 .chars()
                 .map(|c| if c.is_alphanumeric() { c } else { '-' })
@@ -249,7 +258,7 @@ impl GithubClient {
                 .filter(|s| !s.is_empty())
                 .collect::<Vec<_>>()
                 .join("-");
-            format!("contrib/analysis-{}", sanitized_name)
+            format!("contrib/analise/{}/{}-{}", sanitized_group, sanitized_name, chrono::Utc::now().format("%Y%m%d%H%M"))
         } else {
             format!("contrib/sync-all-{}", chrono::Utc::now().format("%Y%m%d%H%M"))
         };
@@ -288,9 +297,11 @@ impl GithubClient {
 
         // 5) Atualizar arquivo na branch
         let message = if let Some(info) = analysis_info {
-            format!("Contribuição: adicionando/atualizando análise '{}'", info["name"].as_str().unwrap_or("sem nome"))
+            let group = info["groupName"].as_str().unwrap_or("Geral");
+            let name = info["name"].as_str().unwrap_or("Sem Nome");
+            format!("Contribuição: Análise [{}] {}", group, name)
         } else {
-            "Contribuição: sincronização total das análises".to_string()
+            "Contribuição: Sincronização geral de análises".to_string()
         };
 
         let put_body = if let Some(sha) = remote_sha {
@@ -310,11 +321,13 @@ impl GithubClient {
             return Err(format!("Failed to create/update file: {} - {}", status, t));
         }
 
-        // 6) Criar o Pull Request
+        // 6) Criar o Pull Request Semântico
         let title = if let Some(info) = analysis_info {
-            format!("Contribuição: Análise '{}'", info["name"].as_str().unwrap_or("Sem Nome"))
+            let name = info["name"].as_str().unwrap_or("Sem Nome");
+            let group = info["groupName"].as_str().unwrap_or("Geral");
+            format!("[Análise | {}] {}", group, name)
         } else {
-            "Contribuição: Sincronização de Análises".to_string()
+            format!("[Sync | Análises] Sincronização de {} análise(s)", history.len())
         };
 
         let body = if let Some(info) = analysis_info {
@@ -322,18 +335,29 @@ impl GithubClient {
             let group = info["groupName"].as_str().unwrap_or("Desconhecido");
             let file_count = info["files"].as_array().map(|a| a.len()).unwrap_or(0);
             let var_count = info["variables"].as_array().map(|a| a.len()).unwrap_or(0);
+            let art_count = info["publishedArtifacts"].as_array().map(|a| a.len()).unwrap_or(0);
+            let created_at = info["createdAt"].as_str().unwrap_or("-");
 
             format!(
-                "### Nova Contribuição de Análise\n\n\
-                **Nome:** {}\n\
-                **Grupo:** {}\n\
-                **Arquivos processados:** {}\n\
-                **Variáveis configuradas:** {}\n\n\
-                Esta contribuição foi gerada automaticamente via Gepis OpenData Desktop.",
-                name, group, file_count, var_count
+                "### 📊 Nova Contribuição de Análise Descritiva\n\n\
+                | Metadado | Detalhe |\n\
+                | :--- | :--- |\n\
+                | **Nome da Análise** | **{}** |\n\
+                | **Grupo de Dados** | `{}` |\n\
+                | **Arquivos Processados** | {} arquivo(s) |\n\
+                | **Variáveis Configuradas** | {} variável(is) |\n\
+                | **Artefatos / Gráficos** | {} publicação(ões) |\n\
+                | **Data de Criação** | {} |\n\n\
+                > *Esta contribuição foi gerada e enviada automaticamente via GEPIS OpenData Desktop.*",
+                name, group, file_count, var_count, art_count, created_at
             )
         } else {
-            "Sincronização automática de todas as análises locais via aplicação desktop.".to_string()
+            format!(
+                "### 🔄 Sincronização Geral de Análises\n\n\
+                Sincronização contendo **{}** análise(s) configurada(s) localmente.\n\n\
+                > *Gerado automaticamente via GEPIS OpenData Desktop.*",
+                history.len()
+            )
         };
 
         let pr_url = format!("https://api.github.com/repos/{}/{}/pulls", config.owner, config.repo);
@@ -405,6 +429,14 @@ impl GithubClient {
                 let is_draft = item["draft"].as_bool().unwrap_or(false);
                 let head_ref = item["head"]["ref"].as_str().map(|s| s.to_string());
                 let base_ref = item["base"]["ref"].as_str().map(|s| s.to_string());
+                let labels: Vec<String> = item["labels"]
+                    .as_array()
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|l| l["name"].as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
 
                 PullRequestInfo {
                     id,
@@ -422,6 +454,7 @@ impl GithubClient {
                     is_draft,
                     head_ref,
                     base_ref,
+                    labels,
                 }
             })
             .collect();

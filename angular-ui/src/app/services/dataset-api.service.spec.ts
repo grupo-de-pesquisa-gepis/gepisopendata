@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { DatasetApiService } from './dataset-api.service';
@@ -10,6 +11,7 @@ describe('DatasetApiService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        provideZonelessChangeDetection(),
         DatasetApiService,
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -66,10 +68,11 @@ describe('DatasetApiService', () => {
   it('should throw error when downloading dataset in web mode', async () => {
     await expectAsync(
       service.downloadDataset('http://example.com/data.zip', {
-        sourceName: 'Test',
-        groupName: 'test',
-        year: '2023',
-        category: 'Test'
+        titulo: 'Test Dataset',
+        tituloCurto: 'Test',
+        grupo: 'test',
+        formato: 'csv',
+        ano: '2023',
       })
     ).toBeRejectedWithError(/Download de datasets não é suportado no modo Web/);
   });
