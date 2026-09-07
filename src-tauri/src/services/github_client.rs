@@ -8,15 +8,68 @@ use crate::models::{GithubConfig, PullRequestInfo};
 pub struct GithubClient;
 
 impl GithubClient {
-    /// Carrega as configurações salvas do GitHub.
+    /// Carrega as configurações salvas do GitHub ou obtém fallbacks de variáveis de ambiente (.env).
     pub fn load_config(config_path: &Path) -> Result<Option<GithubConfig>, String> {
-        if config_path.exists() {
+        let mut config: Option<GithubConfig> = if config_path.exists() {
             let file = File::open(config_path).map_err(|e| e.to_string())?;
-            let config: GithubConfig = serde_json::from_reader(file).map_err(|e| e.to_string())?;
-            Ok(Some(config))
+            let cfg: GithubConfig = serde_json::from_reader(file).map_err(|e| e.to_string())?;
+            Some(cfg)
         } else {
-            Ok(None)
+            None
+        };
+
+        // Fallbacks a partir de variáveis de ambiente (.env)
+        let env_token = std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GH_TOKEN")).ok();
+        let env_username = std::env::var("GITHUB_USERNAME").or_else(|_| std::env::var("GITHUB_USER")).ok();
+        let env_owner = std::env::var("GITHUB_OWNER").ok();
+        let env_repo = std::env::var("GITHUB_REPO").ok();
+        let env_target_branch = std::env::var("GITHUB_PR_TARGET_BRANCH").ok();
+
+        if config.is_none() {
+            if env_token.is_some() || env_owner.is_some() || env_repo.is_some() {
+                let owner = env_owner.unwrap_or_default();
+                let username = env_username.unwrap_or_else(|| owner.clone());
+                let token = env_token.unwrap_or_default();
+                let repo = env_repo.unwrap_or_default();
+                let pr_target_branch = env_target_branch.unwrap_or_else(|| "production".to_string());
+
+                config = Some(GithubConfig {
+                    username,
+                    token,
+                    owner,
+                    repo,
+                    pr_target_branch,
+                });
+            }
+        } else if let Some(ref mut cfg) = config {
+            if cfg.token.is_empty() {
+                if let Some(token) = env_token {
+                    cfg.token = token;
+                }
+            }
+            if cfg.username.is_empty() {
+                if let Some(username) = env_username {
+                    cfg.username = username;
+                }
+            }
+            if cfg.owner.is_empty() {
+                if let Some(owner) = env_owner {
+                    cfg.owner = owner;
+                }
+            }
+            if cfg.repo.is_empty() {
+                if let Some(repo) = env_repo {
+                    cfg.repo = repo;
+                }
+            }
+            if cfg.pr_target_branch.is_empty() {
+                if let Some(branch) = env_target_branch {
+                    cfg.pr_target_branch = branch;
+                }
+            }
         }
+
+        Ok(config)
     }
 
     /// Salva as configurações de autenticação e repositório do GitHub.
@@ -376,3 +429,65 @@ impl GithubClient {
         Ok(prs)
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_save_and_load_config() {
+        let temp_dir = std::env::temp_dir().join(format!("gepis_test_gh_{}", uuid::Uuid::new_v4()));
+        let config_file = temp_dir.join("github-config.json");
+
+        let initial_config = GithubConfig {
+            username: "test-user".to_string(),
+            token: "ghp_123456789".to_string(),
+            owner: "test-owner".to_string(),
+            repo: "test-repo".to_string(),
+            pr_target_branch: "production".to_string(),
+        };
+
+        // Salvar
+        let save_res = GithubClient::save_config(&config_file, &initial_config);
+        assert!(save_res.is_ok(), "Falha ao salvar configuração do GitHub");
+
+        // Carregar
+        let loaded = GithubClient::load_config(&config_file).expect("Falha ao carregar config");
+        assert!(loaded.is_some());
+        let cfg = loaded.unwrap();
+        assert_eq!(cfg.username, "test-user");
+        assert_eq!(cfg.token, "ghp_123456789");
+        assert_eq!(cfg.owner, "test-owner");
+        assert_eq!(cfg.repo, "test-repo");
+
+        // Limpeza
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_load_config_fallback_to_env() {
+        let nonexistent = Path::new("/tmp/nonexistent_gepis_gh_config.json");
+
+        // Set env vars
+        std::env::set_var("GITHUB_TOKEN", "ghp_env_token_test");
+        std::env::set_var("GITHUB_OWNER", "env_owner_test");
+        std::env::set_var("GITHUB_REPO", "env_repo_test");
+        std::env::set_var("GITHUB_USERNAME", "env_user_test");
+
+        let loaded = GithubClient::load_config(nonexistent).expect("Falha ao carregar config");
+        assert!(loaded.is_some());
+        let cfg = loaded.unwrap();
+        assert_eq!(cfg.token, "ghp_env_token_test");
+        assert_eq!(cfg.owner, "env_owner_test");
+        assert_eq!(cfg.repo, "env_repo_test");
+        assert_eq!(cfg.username, "env_user_test");
+        assert_eq!(cfg.pr_target_branch, "production");
+
+        // Clean env vars
+        std::env::remove_var("GITHUB_TOKEN");
+        std::env::remove_var("GITHUB_OWNER");
+        std::env::remove_var("GITHUB_REPO");
+        std::env::remove_var("GITHUB_USERNAME");
+    }
+}
+

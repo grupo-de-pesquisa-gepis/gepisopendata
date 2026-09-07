@@ -49,6 +49,14 @@
             <mat-hint>Branch alvo para Pull Requests (padrão: production)</mat-hint>
           </mat-form-field>
         </div>
+
+        <div class="env-info-box">
+          <mat-icon>lightbulb</mat-icon>
+          <div class="env-info-text">
+            <strong>Dica para Desenvolvimento:</strong>
+            <span>Você pode definir valores padrão copiando o arquivo <code>.env.example</code> para <code>.env</code> na raiz do projeto (suporta <code>GITHUB_TOKEN</code>, <code>GITHUB_USERNAME</code>, <code>GITHUB_OWNER</code>, <code>GITHUB_REPO</code> e <code>GITHUB_PR_TARGET_BRANCH</code>).</span>
+          </div>
+        </div>
       </form>
 
       @if (isTesting()) {

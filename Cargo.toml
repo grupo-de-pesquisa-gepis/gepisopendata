@@ -38,6 +38,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "ansi", "time"] }
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting"] }
+dotenvy = "0.15"
 
 [build-dependencies]
 tauri-build = { version = "2.0.0", features = [] }

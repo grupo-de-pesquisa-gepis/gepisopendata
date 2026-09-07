@@ -35,6 +35,43 @@ mat-form-field {
   width: 100%;
 }
 
+.env-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #f0f4f8;
+  border: 1px solid #d0dbe5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #334155;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.env-info-box mat-icon {
+  color: #0284c7;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.env-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.env-info-text code {
+  background: #e2e8f0;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #0f172a;
+}
+
 .test-progress {
   margin-top: 16px;
 }

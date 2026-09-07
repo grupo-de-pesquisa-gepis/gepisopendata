@@ -33,6 +33,9 @@ fn init_app_data(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
 }
 
 fn main() {
+    // Carrega variáveis de ambiente a partir de .env se presente
+    dotenvy::dotenv().ok();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())

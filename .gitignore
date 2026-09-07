@@ -23,3 +23,9 @@ downloads/
 /temp_prints/
 /TEMP/
 /pdfs/
+
+# Environment configuration and secrets
+.env
+.env.*
+!.env.example
+
