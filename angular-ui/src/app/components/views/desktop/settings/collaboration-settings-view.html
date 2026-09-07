@@ -26,7 +26,7 @@
             <button mat-icon-button matSuffix (click)="hideToken = !hideToken" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hideToken">
               <mat-icon>{{ hideToken ? 'visibility_off' : 'visibility' }}</mat-icon>
             </button>
-            <mat-hint>Requer escopo 'repo'</mat-hint>
+            <mat-hint>Requer escopos: repo, workflow, write:packages, admin:repo_hook, gist, notifications</mat-hint>
           </mat-form-field>
         </div>
 
