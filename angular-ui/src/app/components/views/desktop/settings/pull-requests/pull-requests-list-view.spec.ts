@@ -111,6 +111,8 @@ describe('PullRequestsListView', () => {
 
   it('should filter pull requests by category type', async () => {
     await fixture.whenStable();
+    component.onFilterStateChange('all');
+
     component.onFilterTypeChange('analysis');
     expect(component.filteredPullRequests().length).toBe(1);
     expect(component.filteredPullRequests()[0].number).toBe(102);

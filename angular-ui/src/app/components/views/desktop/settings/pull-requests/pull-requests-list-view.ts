@@ -57,7 +57,7 @@ export class PullRequestsListView implements OnInit {
   isLoading = signal(true);
   error = signal<string | null>(null);
 
-  filterState = signal<'all' | 'open' | 'closed'>('all');
+  filterState = signal<'all' | 'open' | 'closed'>('open');
   filterType = signal<'all' | 'analysis' | 'dataset' | 'sync'>('all');
   searchQuery = signal('');
 
