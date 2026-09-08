@@ -114,6 +114,9 @@ export class App implements OnInit, OnDestroy {
       case 'list_pull_requests':
         route = '/desktop/settings/pull-requests';
         break;
+      case 'malhas_ibge':
+        route = '/desktop/settings/dados-abertos/malhas-ibge';
+        break;
       default:
         console.warn(`Unrecognized menu ID: ${menuId}`);
         return;

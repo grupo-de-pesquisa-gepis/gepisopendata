@@ -66,7 +66,11 @@ fn main() {
             test_github_connection,
             push_dataset_to_github,
             publish_analysis,
-            list_pull_requests
+            list_pull_requests,
+            get_ibge_malhas_status,
+            download_ibge_malha,
+            delete_ibge_malha,
+            open_ibge_malhas_folder
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();

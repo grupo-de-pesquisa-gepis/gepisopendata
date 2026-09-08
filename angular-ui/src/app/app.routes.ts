@@ -91,6 +91,13 @@ export const routes: Routes = [
             (m) => m.PullRequestsListView
           ),
       },
+      {
+        path: 'settings/dados-abertos/malhas-ibge',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/malhas-ibge/malhas-ibge-view').then(
+            (m) => m.MalhasIbgeView
+          ),
+      },
     ],
   },
 ];

@@ -2383,9 +2383,43 @@
           "valueVar": "QT_MAT_FUND_AI_INT"
         },
         "type": "barchart"
+      },
+      {
+        "createdAt": "2026-09-08T01:23:03.871Z",
+        "data": {
+          "x": [
+            "2023",
+            "2024",
+            "2021",
+            "2022",
+            "2025"
+          ],
+          "y": [
+            217625,
+            215545,
+            221140,
+            224649,
+            178766
+          ]
+        },
+        "id": "c570e462-3805-48f3-bd74-3d2a920cba46",
+        "label": "GraficoNuAnoCenso*",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "metric": "count",
+          "showBarValues": true,
+          "statisticalType": "quantitativa_discreta",
+          "valueVar": "NU_ANO_CENSO"
+        },
+        "type": "barchart",
+        "xLabelMap": {},
+        "xTitle": "NU_ANO_CENSO",
+        "yPrefix": "",
+        "ySuffix": "",
+        "yTitle": "Contagem Num Linhas"
       }
     ],
-    "updatedAt": "2026-08-07T14:32:44.458373859+00:00",
+    "updatedAt": "2026-09-08T01:23:44.026065918+00:00",
     "variables": [
       {
         "description": "Ano do Censo",
