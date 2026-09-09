@@ -117,6 +117,9 @@ export class App implements OnInit, OnDestroy {
       case 'malhas_ibge':
         route = '/desktop/settings/dados-abertos/malhas-ibge';
         break;
+      case 'padrao_mapas':
+        route = '/desktop/settings/dados-abertos/padrao-mapas';
+        break;
       default:
         console.warn(`Unrecognized menu ID: ${menuId}`);
         return;

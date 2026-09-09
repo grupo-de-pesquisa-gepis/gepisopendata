@@ -98,6 +98,13 @@ export const routes: Routes = [
             (m) => m.MalhasIbgeView
           ),
       },
+      {
+        path: 'settings/dados-abertos/padrao-mapas',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/padrao-mapas/padrao-mapas-view').then(
+            (m) => m.PadraoMapasView
+          ),
+      },
     ],
   },
 ];

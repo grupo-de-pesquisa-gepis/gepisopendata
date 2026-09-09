@@ -19,10 +19,11 @@ pub fn setup_app_menu(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Er
     let list_prs_item = MenuItem::with_id(app, "list_pull_requests", "List Pull Requests", true, None::<&str>)?;
     let colaboracao_submenu = Submenu::with_items(app, "Colaboração", true, &[&config_github_item, &list_prs_item])?;
 
-    let malhas_ibge_item = MenuItem::with_id(app, "malhas_ibge", "Malhas IBGE", true, None::<&str>)?;
-    let dados_abertos_submenu = Submenu::with_items(app, "Dados Abertos", true, &[&malhas_ibge_item])?;
+    let malhas_ibge_item = MenuItem::with_id(app, "malhas_ibge", "Gerenciar Malhas", true, None::<&str>)?;
+    let padrao_mapas_item = MenuItem::with_id(app, "padrao_mapas", "Padrão de Mapas", true, None::<&str>)?;
+    let malhas_ibge_submenu = Submenu::with_items(app, "Malhas IBGE", true, &[&malhas_ibge_item, &padrao_mapas_item])?;
 
-    let config_submenu = Submenu::with_items(app, "Configurações", true, &[&colaboracao_submenu, &dados_abertos_submenu])?;
+    let config_submenu = Submenu::with_items(app, "Configurações", true, &[&colaboracao_submenu, &malhas_ibge_submenu])?;
 
     let menu = Menu::with_items(app, &[&conjuntos_submenu, &analisar_submenu, &config_submenu, &ajuda_submenu])?;
     app.set_menu(menu)?;

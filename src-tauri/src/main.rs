@@ -70,7 +70,8 @@ fn main() {
             get_ibge_malhas_status,
             download_ibge_malha,
             delete_ibge_malha,
-            open_ibge_malhas_folder
+            open_ibge_malhas_folder,
+            get_or_load_ibge_geojson
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();

@@ -550,6 +550,30 @@ impl IbgeMalhasService {
         Ok(())
     }
 
+    pub async fn get_or_load_geojson(
+        app_handle: &tauri::AppHandle,
+        app_data_dir: &Path,
+        level: &str,
+        quality: &str,
+    ) -> Result<String, String> {
+        let meta = LEVELS
+            .iter()
+            .find(|m| m.id == level)
+            .ok_or_else(|| format!("Nível desconhecido: {}", level))?;
+
+        let geojson_dir = Self::get_geojson_dir(app_data_dir);
+        let target_file = geojson_dir.join(format!("{}_{}.geojson", meta.package_name, quality));
+
+        if target_file.exists() {
+            return fs::read_to_string(&target_file)
+                .map_err(|e| format!("Falha ao ler arquivo GeoJSON existente: {}", e));
+        }
+
+        Self::download_geojson(app_handle, app_data_dir, meta, quality, true).await?;
+        fs::read_to_string(&target_file)
+            .map_err(|e| format!("Falha ao ler arquivo GeoJSON após download: {}", e))
+    }
+
     pub fn delete_malha(
         app_data_dir: &Path,
         level: &str,

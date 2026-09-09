@@ -4,16 +4,19 @@ target
 #so we do not want to send it to github
 www
 
-# Ignore downloaded datasets
+# Ignore downloaded datasets and malhas
 *.zip
 *.csv
 *.xlsx
 *.parquet
+*.geojson
 *.json.metadata.json
 downloads/
 /data/
-!/angular-ui/public/data/*.json
-/home/wgn/WORKING/Projects-Srcs/Projects-Srcs-FzlSoft/AnsibleArtifacts/vars/vault.yml
+/angular-ui/public/data/*
+!/angular-ui/public/data/datasets-registry.json
+!/angular-ui/public/data/analyses-history.json
+/home/wgn/WORKING/Projects-Srcs/Projects-Srcs-GEPIS/AnsibleArtifacts/vars/vault.yml
 
 # Emacs project-isolated cache and package environments
 .emacs-*/

@@ -102,4 +102,42 @@ export class IbgeMalhasApiService {
     }
     await invoke('open_ibge_malhas_folder');
   }
+
+  async getGeoJsonData(
+    level: string,
+    quality: string = 'minima'
+  ): Promise<{ data: any; sizeBytes: number }> {
+    if (isTauri()) {
+      try {
+        const jsonStr = await invoke<string>('get_or_load_ibge_geojson', {
+          level,
+          quality,
+        });
+        const sizeBytes = new Blob([jsonStr]).size;
+        const data = JSON.parse(jsonStr);
+        return { data, sizeBytes };
+      } catch (e) {
+        console.warn('Falha ao carregar GeoJSON via Tauri, tentando fallback local/web:', e);
+      }
+    }
+
+    const localMap: Record<string, string> = {
+      pais: 'data/BR_pais_2024_minima.geojson',
+      regioes: 'data/BR_regioes_2024_minima.geojson',
+      uf: 'data/BR_uf_2024_minima.geojson',
+      intermediarias: 'data/BR_intermediarias_2024_minima.geojson',
+      imediatas: 'data/BR_imediatas_2024_minima.geojson',
+      municipios: 'data/BR_municipios_2024_minima.geojson',
+    };
+
+    const filePath = localMap[level] || `data/BR_${level}_2024_${quality}.geojson`;
+    const resp = await fetch(filePath);
+    if (!resp.ok) {
+      throw new Error(`Falha HTTP ${resp.status} ao carregar ${filePath}`);
+    }
+    const text = await resp.text();
+    const sizeBytes = new Blob([text]).size;
+    return { data: JSON.parse(text), sizeBytes };
+  }
 }
+

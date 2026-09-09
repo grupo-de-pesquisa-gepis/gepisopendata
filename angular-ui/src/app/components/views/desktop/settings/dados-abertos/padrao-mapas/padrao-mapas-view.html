@@ -1,0 +1,233 @@
+<!-- Barra de cabeçalho -->
+<header class="app-header">
+  <div class="header-title">
+    <h1>🗺️ Padrão de Mapas - Malhas do IBGE (2024)</h1>
+    <span class="badge">Leaflet + GeoJSON</span>
+  </div>
+  <div class="header-controls">
+    <!-- Seletor de Mapa Base (TileLayer) -->
+    <div class="control-group">
+      <label for="basemap-select">🗺️ Mapa Base:</label>
+      <select id="basemap-select" [value]="selectedBasemap()" (change)="onBasemapChange($event)">
+        @for (provider of basemapList; track provider.key) {
+          <option [value]="provider.key">{{ provider.name }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Alternador da Grade de Tiles (Debug) -->
+    <div class="control-group">
+      <label for="toggle-grid" class="checkbox-label">
+        <input type="checkbox" id="toggle-grid" [checked]="showDebugGrid()" (change)="toggleDebugGrid($event)">
+        🔍 Grade de Tiles (Z/X/Y)
+      </label>
+    </div>
+
+    <!-- Indicador de carregamento -->
+    @if (isLoading()) {
+      <span class="loading">
+        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">sync</mat-icon>
+        {{ loadingMessage() }}
+      </span>
+    }
+  </div>
+</header>
+
+<!-- Container principal do layout -->
+<div class="main-container">
+  
+  <!-- Painel Lateral de Informações -->
+  <aside class="sidebar">
+
+    <!-- Camadas do Mapa (IBGE) -->
+    <details class="accordion-item layers-accordion" open>
+      <summary class="accordion-header" title="Clique para recolher esta seção">📐 Camadas do Mapa (IBGE)</summary>
+      <div class="accordion-body">
+        <p class="instruction">Marque uma ou mais malhas para combiná-las no mapa.</p>
+        <p class="instruction color-legend-hint">
+          🎨 <strong>Cores:</strong> Regiões usam cor fixa por região · UFs usam tons da cor da sua região · Municípios usam uma paleta própria para contrastar com a UF por baixo. O contorno da UF fica mais grosso e escuro para continuar visível mesmo com os Municípios ligados.
+        </p>
+
+        <!-- Alternador de Nível Automático por Zoom -->
+        <div class="auto-lod-toggle">
+          <label class="checkbox-label" for="toggle-auto-lod">
+            <input type="checkbox" id="toggle-auto-lod" [checked]="autoLodEnabled()" (change)="onAutoLodToggle($event)">
+            🎯 <strong>Auto-Recorte por Zoom (LOD)</strong>
+          </label>
+          <span class="lod-hint">Alterna País (Z≤3) → Regiões (Z=4) → UFs (Z=5..7) → Municípios (Z≥8). Marcar uma malha manualmente desativa o auto-recorte.</span>
+        </div>
+
+        <!-- Alerta de Malha Não Disponível -->
+        @if (missingMalhaMessage()) {
+          <div class="missing-malha-alert">
+            <div class="missing-malha-content">
+              <mat-icon class="alert-icon">cloud_download</mat-icon>
+              <span>{{ missingMalhaMessage() }}</span>
+            </div>
+            <button type="button" class="btn-manage-malhas" (click)="goToGerenciarMalhas()">
+              📥 Ir para Gerenciar Malhas
+            </button>
+          </div>
+        }
+
+        <div class="layer-checkbox-list">
+          @for (layer of availableLayers; track layer.key) {
+            <label class="layer-checkbox-row">
+              <input type="checkbox" 
+                     [checked]="isLayerChecked(layer.key)"
+                     (change)="onLayerCheckboxChange(layer.key, $event)">
+              <span class="layer-row-text">
+                <span class="layer-row-name">{{ layer.icon }} {{ layer.name }}</span>
+                <span class="layer-row-meta">{{ layer.featuresExpected }} feições · ~{{ layer.sizeEstimate }}</span>
+              </span>
+            </label>
+          }
+        </div>
+
+        <h3 class="section-subtitle">Malhas Ativas</h3>
+        <div class="active-layers-panel">
+          @if (activeLayerKeys().length === 0) {
+            <div class="empty-state">Nenhuma malha selecionada</div>
+          } @else {
+            @for (key of activeLayerKeys(); track key) {
+              <div class="active-layer-chip">
+                <div class="active-layer-chip-header">
+                  <span class="active-layer-name">{{ getLayerMeta(key).description }}</span>
+                  <span class="badge-count">{{ activeLayersMap[key]?.featuresCount || 0 }} feições</span>
+                </div>
+                <div class="active-layer-meta">
+                  <code>{{ getLayerMeta(key).fileName }}</code> · 
+                  {{ (activeLayersMap[key]?.payloadSizeBytes ? (activeLayersMap[key]?.payloadSizeBytes! / 1024).toFixed(1) + ' KB' : getLayerMeta(key).sizeEstimate) }} · 
+                  {{ activeLayersMap[key]?.fromCache ? 'cache local' : ((activeLayersMap[key]?.downloadDurationMs || 0).toFixed(0) + ' ms') }}
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <div class="tile-math-box mt-2">
+          <div class="math-row">
+            <span class="math-label">Tiles no Viewport:</span>
+            <span class="math-value highlight-coords">{{ visibleTilesText() }}</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Inspetor de Zoom e Pirâmide de Tiles -->
+    <details class="accordion-item zoom-accordion">
+      <summary class="accordion-header" title="Clique para expandir esta seção">🔍 Inspetor de Zoom (Pirâmide de Tiles)</summary>
+      <div class="accordion-body">
+        <p class="instruction">Altere o zoom inteiro para ver a grade de tiles se subdividir.</p>
+
+        <div class="zoom-slider-container">
+          <div class="zoom-display">
+            <span>Nível de Zoom (Z):</span>
+            <strong>{{ currentZoom() }}</strong>
+          </div>
+          <input type="range" min="0" max="18" step="1" [value]="currentZoom()" (input)="onZoomSliderInput($event)">
+        </div>
+
+        <div class="zoom-presets">
+          @for (preset of zoomPresets; track preset.zoom) {
+            <button class="btn-preset" 
+                    [class.active]="currentZoom() === preset.zoom"
+                    (click)="setZoomPreset(preset.zoom)">
+              {{ preset.label }} ({{ preset.zoom }})
+            </button>
+          }
+        </div>
+
+        <div class="tile-math-box">
+          <div class="math-row">
+            <span class="math-label">Dimensão da grade:</span>
+            <span class="math-value">{{ gridDimension() }}</span>
+          </div>
+          <div class="math-row">
+            <span class="math-label">Total de tiles no planeta:</span>
+            <span class="math-value">{{ totalTiles() }}</span>
+          </div>
+          <div class="math-row">
+            <span class="math-label">Tile central visível:</span>
+            <span class="math-value highlight-coords">{{ centerTileText() }}</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Informações da Feição GeoJSON -->
+    <details class="accordion-item" open>
+      <summary class="accordion-header" title="Clique para expandir esta seção">ℹ️ Detalhes da Feição</summary>
+      <div class="accordion-body">
+        <p class="instruction">Passe o mouse ou clique em uma área do mapa para ver seus dados.</p>
+
+        <div class="details-content">
+          @if (!selectedFeature()) {
+            <div class="empty-state">Nenhuma área selecionada</div>
+          } @else {
+            <table class="detail-table">
+              <tr><td class="label">Nome:</td><td class="value"><strong>{{ selectedFeature()?.nome }}</strong></td></tr>
+              <tr><td class="label">Código IBGE:</td><td class="value">{{ selectedFeature()?.codigo }}</td></tr>
+              @if (selectedFeature()?.uf) {
+                <tr><td class="label">UF:</td><td class="value">{{ selectedFeature()?.uf }}</td></tr>
+              }
+              @if (selectedFeature()?.regiao) {
+                <tr><td class="label">Região:</td><td class="value">{{ selectedFeature()?.regiao }}</td></tr>
+              }
+              @if (selectedFeature()?.area) {
+                <tr><td class="label">Área:</td><td class="value">{{ selectedFeature()?.area }}</td></tr>
+              }
+            </table>
+          }
+        </div>
+      </div>
+    </details>
+
+    <!-- Legenda de Regiões -->
+    <details class="accordion-item" id="legend-card" open>
+      <summary class="accordion-header" title="Clique para expandir esta seção">🎨 Regiões do Brasil</summary>
+      <div class="accordion-body">
+        <ul class="legend-list">
+          <li><span class="legend-color" style="background: #2b83ba;"></span> Norte (N)</li>
+          <li><span class="legend-color" style="background: #abdda4;"></span> Nordeste (NE)</li>
+          <li><span class="legend-color" style="background: #ffffbf;"></span> Centro-Oeste (CO)</li>
+          <li><span class="legend-color" style="background: #fdae61;"></span> Sudeste (SE)</li>
+          <li><span class="legend-color" style="background: #d7191c;"></span> Sul (S)</li>
+        </ul>
+      </div>
+    </details>
+
+    <!-- Informações do TileLayer Ativo -->
+    <details class="accordion-item" id="basemap-info-card">
+      <summary class="accordion-header" title="Clique para expandir esta seção">🌐 TileLayer Ativo</summary>
+      <div class="accordion-body">
+        <p class="basemap-description" [innerHTML]="currentBasemapDesc()"></p>
+        <div class="url-template-box">
+          <span class="url-label">Template URL:</span>
+          <code>{{ currentBasemapUrl() }}</code>
+        </div>
+        <div class="url-template-box mt-2">
+          <span class="url-label">URL do Tile Central:</span>
+          <code class="sample-url">{{ currentSampleTileUrl() }}</code>
+        </div>
+      </div>
+    </details>
+
+    <!-- Resumo didático -->
+    <details class="accordion-item didactic-card">
+      <summary class="accordion-header" title="Clique para expandir esta seção">💡 Como a Pirâmide de Tiles funciona</summary>
+      <div class="accordion-body">
+        <ol class="steps-list">
+          <li><strong>Zoom Z:</strong> O mundo é dividido em <code>2^Z × 2^Z</code> blocos quadrados.</li>
+          <li><strong>Cada Bloco:</strong> Tem exatamente <code>256 × 256 pixels</code>.</li>
+          <li><strong>Coordenadas X/Y:</strong> Numeradas de <code>0</code> a <code>2^Z - 1</code>.</li>
+          <li><strong>Economia:</strong> O navegador baixa apenas os ~15 blocos visíveis na tela!</li>
+        </ol>
+      </div>
+    </details>
+  </aside>
+
+  <!-- Container DOM onde o Leaflet irá desenhar o mapa -->
+  <main #mapContainer class="map-container"></main>
+
+</div>

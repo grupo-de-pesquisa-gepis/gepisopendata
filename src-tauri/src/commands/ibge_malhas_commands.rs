@@ -42,6 +42,7 @@ pub async fn delete_ibge_malha(
     IbgeMalhasService::delete_malha(&app_data_dir, &level, &format, quality.as_deref())
 }
 
+#[allow(deprecated)]
 #[tauri::command]
 pub async fn open_ibge_malhas_folder(app: tauri::AppHandle) -> Result<(), String> {
     let app_data_dir = app
@@ -62,3 +63,19 @@ pub async fn open_ibge_malhas_folder(app: tauri::AppHandle) -> Result<(), String
 
     Ok(())
 }
+
+#[tauri::command]
+pub async fn get_or_load_ibge_geojson(
+    app: tauri::AppHandle,
+    level: String,
+    quality: Option<String>,
+) -> Result<String, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Falha ao resolver app_data_dir: {}", e))?;
+
+    let q = quality.unwrap_or_else(|| "minima".to_string());
+    IbgeMalhasService::get_or_load_geojson(&app, &app_data_dir, &level, &q).await
+}
+
