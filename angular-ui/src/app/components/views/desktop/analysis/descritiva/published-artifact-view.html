@@ -1,0 +1,133 @@
+<div class="container">
+  <div class="header">
+    <button mat-icon-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    
+    @if (!isEditing()) {
+      <h1 appAutoTooltip>{{ artifact()?.label || 'Visualizar Publicação' }}</h1>
+      @if (isDesktop()) {
+        <button mat-icon-button (click)="startEdit()" matTooltip="Editar detalhes do gráfico">
+          <mat-icon>edit</mat-icon>
+        </button>
+      }
+    } @else {
+      <mat-form-field appearance="outline" class="edit-title-field">
+        <mat-label>Título do Gráfico</mat-label>
+        <input matInput [(ngModel)]="tempLabel" (ngModelChange)="updatePreview()" (keyup.enter)="saveChanges()">
+      </mat-form-field>
+      <div class="edit-actions">
+        <button mat-button (click)="cancelEdit()">Cancelar</button>
+        <button mat-flat-button color="primary" (click)="saveChanges()">Salvar</button>
+      </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-progress-bar mode="query"></mat-progress-bar>
+      <p>Carregando dados da publicação...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-state">
+      <mat-icon color="warn">error</mat-icon>
+      <h2>Erro ao carregar publicação</h2>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="goBack()">Voltar</button>
+    </div>
+  } @else {
+    <div class="view-grid" [class.editing-active]="isEditing()">
+      <mat-card appearance="outlined" class="main-chart-card">
+        <mat-card-header>
+          <mat-card-subtitle>
+            Análise: <strong>{{ analysis()?.name }}</strong> | 
+            Publicado em: <strong>{{ artifact()?.createdAt | date:'short' }}</strong>
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (graphData) {
+            <plotly-plot 
+              [data]="graphData.data" 
+              [layout]="graphData.layout" 
+              [config]="graphData.config"
+              [useResizeHandler]="true"
+              class="chart-container">
+            </plotly-plot>
+          } @else {
+            <div class="empty-state">
+              <p>Nenhum dado encontrado para este artefato.</p>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      @if (isEditing()) {
+        <mat-card appearance="outlined" class="edit-panel">
+          <mat-card-header>
+            <mat-card-title>Configurações Visuais</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="edit-form">
+              <div class="section-group">
+                <h4>Títulos dos Eixos</h4>
+                <mat-form-field appearance="outline">
+                  <mat-label>Título do Eixo X</mat-label>
+                  <input matInput [(ngModel)]="tempXTitle" (ngModelChange)="updatePreview()" placeholder="Ex: Categorias">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Título do Eixo Y</mat-label>
+                  <input matInput [(ngModel)]="tempYTitle" (ngModelChange)="updatePreview()" placeholder="Ex: Valores">
+                </mat-form-field>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <div class="section-group">
+                <h4>Formatação do Eixo Y (Rótulos)</h4>
+                <div class="row-fields">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Prefixo (ex: $)</mat-label>
+                    <input matInput [(ngModel)]="tempYPrefix" (ngModelChange)="updatePreview()">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Sufixo (ex: %)</mat-label>
+                    <input matInput [(ngModel)]="tempYSuffix" (ngModelChange)="updatePreview()">
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <div class="section-group">
+                <h4>Exibição de Dados</h4>
+                <mat-slide-toggle [(ngModel)]="tempShowBarValues" (change)="updatePreview()">
+                  Mostrar valores nas barras
+                </mat-slide-toggle>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <div class="section-group">
+                <h4>Renomear Categorias (Eixo X)</h4>
+                <div class="category-edit-list">
+                  @for (cat of artifact()?.data?.x; track cat) {
+                    <div class="category-edit-row">
+                      <span class="orig-cat" appAutoTooltip>{{ cat }}</span>
+                      <mat-icon>arrow_forward</mat-icon>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <input matInput [placeholder]="cat" [(ngModel)]="tempXLabelMap[cat]" (ngModelChange)="updatePreview()">
+                      </mat-form-field>
+                    </div>
+                  }
+                </div>
+              </div>
+              
+              <p class="edit-hint">As alterações serão aplicadas ao salvar no cabeçalho.</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

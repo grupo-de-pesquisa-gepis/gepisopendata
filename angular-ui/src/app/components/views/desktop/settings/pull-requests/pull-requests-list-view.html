@@ -1,0 +1,167 @@
+<div class="container">
+  <div class="header">
+    <button mat-icon-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-titles">
+      <h1 appAutoTooltip>Pull Requests de Colaboração</h1>
+      @if (config()) {
+        <span class="repo-badge">
+          <mat-icon inline>hub</mat-icon> {{ config()?.owner }}/{{ config()?.repo }}
+        </span>
+      }
+    </div>
+    <span class="spacer"></span>
+    <button mat-stroked-button color="primary" (click)="loadPullRequests()" [disabled]="isLoading()">
+      <mat-icon>refresh</mat-icon> Atualizar
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <p>Carregando Pull Requests do GitHub...</p>
+    </div>
+  } @else if (error()) {
+    <mat-card appearance="outlined" class="error-card">
+      <mat-card-content>
+        <mat-icon color="warn">error_outline</mat-icon>
+        <h2>Não foi possível carregar os Pull Requests</h2>
+        <p class="error-msg">{{ error() }}</p>
+        <div class="error-actions">
+          <button mat-raised-button color="primary" (click)="loadPullRequests()">Tentar Novamente</button>
+          <button mat-stroked-button (click)="goToSettings()">Ir para Configurações do GitHub</button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <!-- Filters and Search Toolbar -->
+    <div class="toolbar">
+      <div class="filter-group">
+        <mat-button-toggle-group [ngModel]="filterState()" (ngModelChange)="onFilterStateChange($event)" aria-label="Filtro de Estado">
+          <mat-button-toggle value="all">Todos ({{ totalCount() }})</mat-button-toggle>
+          <mat-button-toggle value="open">Abertos ({{ openCount() }})</mat-button-toggle>
+          <mat-button-toggle value="closed">Fechados ({{ closedCount() }})</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        <mat-button-toggle-group [ngModel]="filterType()" (ngModelChange)="onFilterTypeChange($event)" aria-label="Filtro de Tipo" class="type-toggle-group">
+          <mat-button-toggle value="all">Tipos: Todos</mat-button-toggle>
+          <mat-button-toggle value="analysis">
+            <mat-icon inline>assessment</mat-icon> Análises ({{ analysisCount() }})
+          </mat-button-toggle>
+          <mat-button-toggle value="dataset">
+            <mat-icon inline>folder_zip</mat-icon> Datasets ({{ datasetCount() }})
+          </mat-button-toggle>
+          <mat-button-toggle value="sync">
+            <mat-icon inline>sync</mat-icon> Syncs ({{ syncCount() }})
+          </mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+
+      <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Filtrar por título, autor, grupo ou número...">
+        @if (searchQuery()) {
+          <button matSuffix mat-icon-button (click)="searchQuery.set('')">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+    </div>
+
+    <!-- PR List -->
+    @if (filteredPullRequests().length === 0) {
+      <mat-card appearance="outlined" class="empty-state">
+        <mat-card-content>
+          <mat-icon>merge</mat-icon>
+          <p>Nenhum Pull Request encontrado com os filtros selecionados.</p>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+      <div class="pr-list">
+        @for (pr of filteredPullRequests(); track pr.id) {
+          <mat-card appearance="outlined" class="pr-card" [class.open]="pr.state === 'open'" [class.merged]="pr.mergedAt" [class.closed]="pr.state === 'closed' && !pr.mergedAt">
+            <mat-card-content>
+              <div class="pr-main">
+                <!-- Status Icon -->
+                <div class="pr-status-col">
+                  @if (pr.mergedAt) {
+                    <span class="status-badge merged" matTooltip="Mergeado com sucesso">
+                      <mat-icon>call_merge</mat-icon> Mergeado
+                    </span>
+                  } @else if (pr.state === 'open') {
+                    <span class="status-badge open" matTooltip="Pull Request aberto">
+                      <mat-icon>adjust</mat-icon> Aberto
+                    </span>
+                  } @else {
+                    <span class="status-badge closed" matTooltip="Fechado sem merge">
+                      <mat-icon>cancel</mat-icon> Fechado
+                    </span>
+                  }
+                  @if (pr.isDraft) {
+                    <span class="draft-badge">Rascunho</span>
+                  }
+                </div>
+
+                <!-- Info Column -->
+                <div class="pr-info-col">
+                  <div class="pr-title-row">
+                    <!-- Category Badge -->
+                    @let cat = getPrCategory(pr);
+                    <span class="category-badge" [ngClass]="cat.cssClass">
+                      <mat-icon inline>{{ cat.icon }}</mat-icon> {{ cat.label }}
+                    </span>
+
+                    <!-- Group Chip -->
+                    @if (getPrGroupName(pr); as groupName) {
+                      <span class="group-chip" matTooltip="Grupo de Dados">
+                        <mat-icon inline>folder</mat-icon> {{ groupName }}
+                      </span>
+                    }
+
+                    <span class="pr-number">#{{ pr.number }}</span>
+                    <h3 class="pr-title" appAutoTooltip>{{ getCleanTitle(pr) }}</h3>
+                  </div>
+
+                  <div class="pr-meta-row">
+                    @if (pr.userAvatar) {
+                      <img [src]="pr.userAvatar" alt="Avatar" class="user-avatar" />
+                    }
+                    <span class="pr-author" appAutoTooltip>Criado por <strong>{{ pr.userLogin }}</strong></span>
+                    <span class="meta-sep">•</span>
+                    <span class="pr-date">em {{ pr.createdAt | date:'short' }}</span>
+                    @if (pr.headRef && pr.baseRef) {
+                      <span class="meta-sep">•</span>
+                      <span class="branch-pill">
+                        <code>{{ pr.headRef }}</code> &rarr; <code>{{ pr.baseRef }}</code>
+                      </span>
+                    }
+                    @if (pr.labels && pr.labels.length > 0) {
+                      <span class="meta-sep">•</span>
+                      <div class="labels-container">
+                        @for (label of pr.labels; track label) {
+                          <span class="github-label-chip">{{ label }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  @if (pr.body) {
+                    <p class="pr-body-snippet" appAutoTooltip>{{ pr.body }}</p>
+                  }
+                </div>
+
+                <!-- Action Column -->
+                <div class="pr-action-col">
+                  <button mat-stroked-button color="primary" (click)="openPrUrl(pr.htmlUrl)">
+                    <mat-icon>open_in_new</mat-icon> Ver no GitHub
+                  </button>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  }
+</div>

@@ -1,0 +1,117 @@
+.container {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.multi-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.progress-section {
+  margin: 20px 0;
+  padding: 12px;
+  background: #f0f4f8;
+  border-radius: 6px;
+  border: 1px solid #d0dbe5;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #2c3e50;
+}
+
+.byte-counter {
+  font-family: monospace;
+  font-weight: 600;
+  color: #34495e;
+}
+
+.section-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #666;
+  margin: 10px 0 5px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.checkbox-container {
+  padding-bottom: 20px;
+}
+
+.existing-datasets {
+  margin: 8px 0;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.small-label {
+  font-size: 0.75rem;
+  color: #777;
+  margin-bottom: 4px;
+}
+
+mat-card-title {
+  font-weight: bold;
+  color: #3f51b5;
+}
+
+.mode-selector {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.local-files-container {
+  padding: 10px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.selected-files-list {
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.selected-files-list ul {
+  margin: 5px 0;
+  padding-left: 20px;
+}
+
+.path-hint {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.no-files-hint {
+  color: #999;
+  font-size: 0.85rem;
+  margin-top: 10px;
+  font-style: italic;
+}

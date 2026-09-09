@@ -1,0 +1,121 @@
+.container {
+  padding: 24px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0 0 8px 0;
+  color: #3f51b5;
+}
+
+.header p {
+  margin: 0;
+  color: #666;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+}
+
+.empty-state mat-icon {
+  font-size: 64px;
+  height: 64px;
+  width: 64px;
+  color: #ccc;
+  margin-bottom: 16px;
+}
+
+.dataset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.dataset-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dataset-card.missing {
+  border-color: #f44336;
+}
+
+.format-icon {
+  background-color: #e8eaf6;
+  color: #3f51b5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+
+.status-icon {
+  vertical-align: middle;
+  font-size: 1.2rem;
+  height: 1.2rem;
+  width: 1.2rem;
+}
+
+.description {
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.meta-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.file-list {
+  margin-top: auto;
+}
+
+.small-label {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.file-chip {
+  font-size: 0.75rem;
+}
+
+.redownload-progress {
+  margin-top: 16px;
+}
+
+.redownload-progress p {
+  font-size: 0.8rem;
+  color: #f44336;
+  margin-bottom: 4px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+mat-card-actions {
+  border-top: 1px solid #eee;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+}

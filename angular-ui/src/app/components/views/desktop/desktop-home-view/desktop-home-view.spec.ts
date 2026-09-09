@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 import { DesktopHomeView } from './desktop-home-view';
 
@@ -8,7 +9,8 @@ describe('DesktopHomeView', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DesktopHomeView]
+      imports: [DesktopHomeView],
+      providers: [provideZonelessChangeDetection()]
     })
     .compileComponents();
 

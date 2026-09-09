@@ -18,6 +18,8 @@ import { Subscription } from 'rxjs';
 import { FixedSearch } from './components/layout/fixed-search/fixed-search';
 import { SearchInPageService } from './services/search-in-page.service';
 
+import { AutoTooltipDirective } from './directives';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
@@ -32,6 +34,7 @@ import { SearchInPageService } from './services/search-in-page.service';
     MatDividerModule,
     MatExpansionModule,
     MatTooltipModule,
+    AutoTooltipDirective,
     FixedHead,
     FixedStatusbar,
     FixedSearch,
@@ -107,6 +110,15 @@ export class App implements OnInit, OnDestroy {
         break;
       case 'config_colaboracao':
         route = '/desktop/settings/collaboration';
+        break;
+      case 'list_pull_requests':
+        route = '/desktop/settings/pull-requests';
+        break;
+      case 'malhas_ibge':
+        route = '/desktop/settings/dados-abertos/malhas-ibge';
+        break;
+      case 'padrao_mapas':
+        route = '/desktop/settings/dados-abertos/padrao-mapas';
         break;
       default:
         console.warn(`Unrecognized menu ID: ${menuId}`);

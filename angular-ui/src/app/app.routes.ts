@@ -84,6 +84,27 @@ export const routes: Routes = [
             (m) => m.CollaborationSettingsView
           ),
       },
+      {
+        path: 'settings/pull-requests',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/pull-requests/pull-requests-list-view').then(
+            (m) => m.PullRequestsListView
+          ),
+      },
+      {
+        path: 'settings/dados-abertos/malhas-ibge',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/malhas-ibge/malhas-ibge-view').then(
+            (m) => m.MalhasIbgeView
+          ),
+      },
+      {
+        path: 'settings/dados-abertos/padrao-mapas',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/padrao-mapas/padrao-mapas-view').then(
+            (m) => m.PadraoMapasView
+          ),
+      },
     ],
   },
 ];

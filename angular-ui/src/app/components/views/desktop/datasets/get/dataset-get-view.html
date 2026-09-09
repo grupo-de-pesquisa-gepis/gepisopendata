@@ -1,0 +1,204 @@
+<div class="container">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>Obter Conjunto de Dados</mat-card-title>
+      <mat-card-subtitle>Cadastre os metadados e realize o download dos arquivos</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="mode-selector">
+        <mat-button-toggle-group [value]="sourceMode()" (change)="sourceMode.set($event.value)" aria-label="Fonte dos Dados">
+          <mat-button-toggle value="url">
+            <mat-icon>cloud_download</mat-icon> Baixar da Web (URL)
+          </mat-button-toggle>
+          <mat-button-toggle value="local">
+            <mat-icon>folder_open</mat-icon> Importar Local
+          </mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+
+      <form [formGroup]="datasetForm" (ngSubmit)="submitDataset()" class="form-container">
+        <div class="section-title">Agrupamento e Série</div>
+        <div class="row multi-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Grupo / Coleção</mat-label>
+            <input type="text"
+                   placeholder="Ex: Censo Escolar, Comércio Exterior"
+                   aria-label="Grupo"
+                   matInput
+                   formControlName="grupo"
+                   [matAutocomplete]="auto">
+            <mat-autocomplete #auto="matAutocomplete">
+              @for (option of filteredGroups(); track option) {
+                <mat-option [value]="option">{{ option }}</mat-option>
+              }
+            </mat-autocomplete>
+            <mat-hint>Nome para agrupar múltiplos arquivos relacionados</mat-hint>
+          </mat-form-field>
+
+          <div class="checkbox-container">
+            <mat-checkbox formControlName="isSerieHistorica">Este dado faz parte de uma série histórica?</mat-checkbox>
+          </div>
+        </div>
+
+        @if (datasetsInSelectedGroup().length > 0) {
+          <div class="existing-datasets">
+            <div class="small-label">Datasets já existentes neste grupo:</div>
+            <mat-chip-set>
+              @for (dataset of datasetsInSelectedGroup(); track dataset) {
+                <mat-chip>{{ dataset }}</mat-chip>
+              }
+            </mat-chip-set>
+          </div>
+        }
+
+        <mat-divider style="margin: 16px 0;"></mat-divider>
+
+        <div class="section-title">Informações Básicas</div>
+        <div class="row multi-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Título Curto</mat-label>
+            <input matInput formControlName="tituloCurto" placeholder="Ex: Censo Escolar 2023">
+            @if (datasetForm.get('tituloCurto')?.hasError('required')) {
+              <mat-error>O título curto é obrigatório</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Formato Esperado</mat-label>
+            <mat-select formControlName="formato">
+              <mat-option value="csv">CSV</mat-option>
+              <mat-option value="parquet">Parquet</mat-option>
+              <mat-option value="json">JSON</mat-option>
+              <mat-option value="xlsx">Excel (.xlsx)</mat-option>
+              <mat-option value="zip">Arquivo Comprimido (.zip)</mat-option>
+              <mat-option value="outro">Outro</mat-option>
+            </mat-select>
+            <mat-hint>Se for ZIP, tentaremos extrair este formato</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Título Longo</mat-label>
+            <input matInput formControlName="tituloLongo" placeholder="Ex: Microdados do Censo Escolar da Educação Básica 2023">
+            @if (datasetForm.get('tituloLongo')?.hasError('required')) {
+              <mat-error>O título longo é obrigatório</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Descrição</mat-label>
+            <textarea matInput formControlName="descricao" rows="3" placeholder="Breve descrição do conjunto de dados"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="row multi-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Órgão Emissor</mat-label>
+            <input matInput formControlName="orgaoEmissao" placeholder="Ex: INEP">
+            @if (datasetForm.get('orgaoEmissao')?.hasError('required')) {
+              <mat-error>O órgão emissor é obrigatório</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Data de Referência</mat-label>
+            <input matInput formControlName="dataReferencia" placeholder="Ex: 2023 ou 01/2023">
+            @if (datasetForm.get('dataReferencia')?.hasError('required')) {
+              <mat-error>A data de referência é obrigatória</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="row multi-col">
+          <mat-form-field appearance="outline">
+            <mat-label>Frequência de Atualização</mat-label>
+            <mat-select formControlName="frequencia">
+              <mat-option value="Anual">Anual</mat-option>
+              <mat-option value="Mensal">Mensal</mat-option>
+              <mat-option value="Diário">Diário</mat-option>
+              <mat-option value="Irregular">Irregular</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Licença</mat-label>
+            <input matInput formControlName="licenca" placeholder="Ex: ODbL, CC-BY">
+          </mat-form-field>
+        </div>
+
+        @if (sourceMode() === 'url') {
+          <div class="section-title">Download</div>
+          <div class="row">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>URLs para Download (uma por linha)</mat-label>
+              <textarea matInput formControlName="urls" rows="3" placeholder="https://exemplo.gov.br/dados.zip"></textarea>
+              @if (datasetForm.get('urls')?.hasError('required')) {
+                <mat-error>Pelo menos uma URL é obrigatória</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        } @else {
+          <div class="section-title">Arquivos Locais</div>
+          <div class="local-files-container">
+            <button type="button" mat-stroked-button color="accent" (click)="selectLocalFiles()">
+              <mat-icon>add_box</mat-icon> Selecionar Arquivos Desktop
+            </button>
+
+            @if (selectedLocalFiles().length > 0) {
+              <div class="selected-files-list">
+                <p><strong>Arquivos selecionados:</strong></p>
+                <ul>
+                  @for (file of selectedLocalFiles(); track file) {
+                    <li>{{ file.split('/').pop() }} <span class="path-hint">({{ file }})</span></li>
+                  }
+                </ul>
+              </div>
+            } @else {
+              <p class="no-files-hint">Nenhum arquivo selecionado.</p>
+            }
+          </div>
+        }
+
+        <div class="row multi-col" style="margin-top: 16px;">
+          <mat-form-field appearance="outline">
+            <mat-label>Autor/Responsável</mat-label>
+            <input matInput formControlName="autor">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tags (separadas por vírgula)</mat-label>
+            <input matInput formControlName="tags" placeholder="Ex: educação, censo, brasil">
+          </mat-form-field>
+        </div>
+
+        @if (isProcessing()) {
+          <div class="progress-section">
+            @if (datasetApi.downloadProgress(); as progress) {
+              <div class="progress-info">
+                <span>Baixando microdados em streaming... <strong>{{ progress.percent }}%</strong></span>
+                @if (progress.total > 0) {
+                  <span class="byte-counter">{{ (progress.downloaded / 1048576).toFixed(1) }} MB / {{ (progress.total / 1048576).toFixed(1) }} MB</span>
+                }
+              </div>
+              <mat-progress-bar mode="determinate" [value]="progress.percent"></mat-progress-bar>
+            } @else {
+              <p>Processando via Rust (Download/Extração e Metadados)... por favor aguarde.</p>
+              <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            }
+          </div>
+        }
+
+        <div class="actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="isSubmitDisabled()">
+            <mat-icon>{{ sourceMode() === 'url' ? 'cloud_download' : 'save_alt' }}</mat-icon>
+            {{ sourceMode() === 'url' ? 'Registrar e Baixar' : 'Registrar e Importar' }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

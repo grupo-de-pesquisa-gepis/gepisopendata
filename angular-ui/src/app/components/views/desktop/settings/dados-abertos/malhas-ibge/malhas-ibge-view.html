@@ -1,0 +1,273 @@
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <button mat-icon-button (click)="goBack()" title="Voltar ao Início">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-titles">
+      <h1 appAutoTooltip>Malhas Territoriais do IBGE (2024)</h1>
+      <span class="subtitle" appAutoTooltip>
+        Download e gestão das malhas cartográficas oficiais do IBGE para mapas interativos e análises geoespaciais
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <button mat-stroked-button (click)="openFolder()" title="Abrir diretório no explorador de arquivos">
+      <mat-icon>folder_open</mat-icon> Abrir Pasta
+    </button>
+    <button mat-stroked-button color="primary" (click)="loadStatus()" [disabled]="isLoading()" title="Atualizar status dos arquivos">
+      <mat-icon>refresh</mat-icon> Atualizar
+    </button>
+  </div>
+
+  <!-- Realtime Download Progress Bar -->
+  @if (downloadProgress(); as prog) {
+    @if (prog.stage !== 'completed') {
+      <mat-card appearance="outlined" class="progress-card">
+        <mat-card-content>
+          <div class="progress-header">
+            <span class="progress-title">
+              <mat-icon inline color="primary">downloading</mat-icon>
+              <strong>{{ prog.message }}</strong>
+            </span>
+            <span class="progress-stage-chip">{{ prog.stage }}</span>
+          </div>
+          <mat-progress-bar
+            [mode]="prog.percentage !== undefined ? 'determinate' : 'indeterminate'"
+            [value]="prog.percentage ?? 0">
+          </mat-progress-bar>
+          <div class="progress-footer">
+            <span>Nível: <strong>{{ prog.level }}</strong> ({{ prog.format }})</span>
+            @if (prog.percentage !== undefined) {
+              <span>{{ prog.percentage | number:'1.0-1' }}%</span>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  <!-- Stats Overview Banner -->
+  <div class="stats-grid">
+    <mat-card appearance="outlined" class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-wrapper blue">
+          <mat-icon>map</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ overview()?.levels?.length ?? 6 }} Níveis</span>
+          <span class="stat-label">Recortes Territoriais</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-wrapper green">
+          <mat-icon>folder_zip</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalFiles() }} Arquivos</span>
+          <span class="stat-label">Baixados no Disco</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-wrapper purple">
+          <mat-icon>storage</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalSizeFormatted() }}</span>
+          <span class="stat-label">Espaço Ocupado</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="stat-card batch-card">
+      <mat-card-content>
+        <div class="batch-actions">
+          <span class="batch-title">Downloads em Lote</span>
+          <div class="batch-buttons">
+            <button mat-raised-button color="primary" (click)="downloadAllGeojson('minima')" [disabled]="isBatchDownloading() || isLoading()">
+              <mat-icon>download</mat-icon> Todos GeoJSONs (Web)
+            </button>
+            <button mat-stroked-button (click)="downloadAllShapefiles()" [disabled]="isBatchDownloading() || isLoading()">
+              <mat-icon>cloud_download</mat-icon> Todos Shapefiles
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Options & Search Bar -->
+  <div class="toolbar">
+    <div class="options-group">
+      <mat-checkbox [ngModel]="enrichNames()" (ngModelChange)="enrichNames.set($event)" color="primary">
+        Enriquecer GeoJSONs com API de Localidades (nomes, UFs e siglas)
+      </mat-checkbox>
+      <mat-checkbox [ngModel]="extractZip()" (ngModelChange)="extractZip.set($event)" color="primary">
+        Extrair arquivos Shapefile (.shp, .dbf) após o download
+      </mat-checkbox>
+    </div>
+
+    <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Filtrar níveis territoriais...">
+      @if (searchQuery()) {
+        <button matSuffix mat-icon-button (click)="searchQuery.set('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+  </div>
+
+  <!-- Levels Cards Grid -->
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <p>Verificando arquivos locais e status das malhas...</p>
+    </div>
+  } @else {
+    <div class="levels-grid">
+      @for (level of filteredLevels(); track level.id) {
+        <mat-card appearance="outlined" class="level-card">
+          <mat-card-header>
+            <div class="level-header-row">
+              <div class="level-titles">
+                <h2 class="level-name" appAutoTooltip>{{ level.name }}</h2>
+                <span class="package-pill"><code>{{ level.packageName }}</code></span>
+              </div>
+              <span class="features-badge" matTooltip="Quantidade total de polígonos/feições">
+                <mat-icon inline>layers</mat-icon> {{ level.expectedFeatures | number }} feições
+              </span>
+            </div>
+          </mat-card-header>
+
+          <mat-card-content>
+            <p class="level-desc" appAutoTooltip>{{ level.description }}</p>
+
+            <!-- GeoJSON Section -->
+            <div class="format-section geojson-section">
+              <div class="section-title-row">
+                <span class="format-badge geojson">
+                  <mat-icon inline>public</mat-icon> GeoJSON (API v4 / Mapas Web)
+                </span>
+                <span class="spacer"></span>
+                <!-- Quality Selector -->
+                <mat-form-field appearance="outline" class="quality-select" subscriptSizing="dynamic">
+                  <mat-label>Qualidade</mat-label>
+                  <mat-select [value]="getQualityForLevel(level.id)" (selectionChange)="setQualityForLevel(level.id, $event.value)">
+                    <mat-option value="minima">Mínima (Web)</mat-option>
+                    <mat-option value="intermediaria">Intermediária</mat-option>
+                    <mat-option value="maxima">Máxima</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              @let qStatus = getGeojsonStatus(level, getQualityForLevel(level.id));
+              <div class="format-body">
+                <div class="status-indicator-row">
+                  @if (qStatus?.exists) {
+                    <span class="status-pill downloaded">
+                      <mat-icon inline>check_circle</mat-icon> Baixado ({{ formatBytes(qStatus?.sizeBytes || 0) }})
+                    </span>
+                    @if (qStatus?.updatedAt) {
+                      <span class="file-date">{{ qStatus?.updatedAt | date:'short' }}</span>
+                    }
+                  } @else {
+                    <span class="status-pill not-downloaded">
+                      <mat-icon inline>radio_button_unchecked</mat-icon> Não baixado
+                    </span>
+                  }
+                </div>
+
+                <div class="actions-row">
+                  <button
+                    mat-flat-button
+                    color="primary"
+                    (click)="downloadGeojson(level.id)"
+                    [disabled]="isOperationActive(level.id + '_geojson_' + getQualityForLevel(level.id)) || isBatchDownloading()">
+                    @if (isOperationActive(level.id + '_geojson_' + getQualityForLevel(level.id))) {
+                      <mat-icon>hourglass_top</mat-icon> Baixando...
+                    } @else if (qStatus?.exists) {
+                      <mat-icon>sync</mat-icon> Rebaixar GeoJSON
+                    } @else {
+                      <mat-icon>download</mat-icon> Baixar GeoJSON
+                    }
+                  </button>
+
+                  @if (qStatus?.exists) {
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      (click)="deleteFile(level.id, 'geojson', getQualityForLevel(level.id))"
+                      matTooltip="Excluir este arquivo GeoJSON">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Shapefile Section -->
+            <div class="format-section shapefile-section">
+              <div class="section-title-row">
+                <span class="format-badge shapefile">
+                  <mat-icon inline>inventory_2</mat-icon> Shapefile Oficial (GeoFTP / SIRGAS 2000)
+                </span>
+              </div>
+
+              @let shpStatus = level.shapefile;
+              <div class="format-body">
+                <div class="status-indicator-row">
+                  @if (shpStatus?.exists) {
+                    <span class="status-pill downloaded">
+                      <mat-icon inline>check_circle</mat-icon> ZIP Baixado ({{ formatBytes(shpStatus?.sizeBytes || 0) }})
+                    </span>
+                    @if (shpStatus?.isExtracted) {
+                      <span class="extracted-pill" matTooltip="Pasta com arquivos .shp, .dbf, .shx, .prj disponível">
+                        <mat-icon inline>unarchive</mat-icon> Extraído
+                      </span>
+                    }
+                  } @else {
+                    <span class="status-pill not-downloaded">
+                      <mat-icon inline>radio_button_unchecked</mat-icon> Não baixado
+                    </span>
+                  }
+                </div>
+
+                <div class="actions-row">
+                  <button
+                    mat-stroked-button
+                    color="primary"
+                    (click)="downloadShapefile(level.id)"
+                    [disabled]="isOperationActive(level.id + '_shapefile') || isBatchDownloading()">
+                    @if (isOperationActive(level.id + '_shapefile')) {
+                      <mat-icon>hourglass_top</mat-icon> Baixando...
+                    } @else if (shpStatus?.exists) {
+                      <mat-icon>sync</mat-icon> Rebaixar Shapefile
+                    } @else {
+                      <mat-icon>cloud_download</mat-icon> Baixar Shapefile
+                    }
+                  </button>
+
+                  @if (shpStatus?.exists) {
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      (click)="deleteFile(level.id, 'shapefile')"
+                      matTooltip="Excluir pacote ZIP e arquivos Shapefile">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

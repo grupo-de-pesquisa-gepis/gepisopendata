@@ -1,0 +1,79 @@
+<div class="container">
+  <div class="header">
+    <h1>Configurações de Colaboração</h1>
+    <p>Configure sua conta do GitHub para compartilhar datasets e análises com outros usuários.</p>
+  </div>
+
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-icon mat-card-avatar color="primary">hub</mat-icon>
+      <mat-card-title>Integração com GitHub</mat-card-title>
+      <mat-card-subtitle>Trabalhe de forma descentralizada usando seu repositório.</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="configForm" class="settings-form">
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Usuário GitHub</mat-label>
+            <input matInput formControlName="username" placeholder="ex: seu-usuario">
+            <mat-icon matSuffix>person</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Personal Access Token (PAT)</mat-label>
+            <input matInput formControlName="token" [type]="hideToken ? 'password' : 'text'" placeholder="ghp_xxxx">
+            <button mat-icon-button matSuffix (click)="hideToken = !hideToken" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hideToken">
+              <mat-icon>{{ hideToken ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-hint>Requer escopos: repo, workflow, write:packages, admin:repo_hook, gist, notifications</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Dono do Repositório (Owner)</mat-label>
+            <input matInput formControlName="owner" placeholder="ex: gepis">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nome do Repositório</mat-label>
+            <input matInput formControlName="repo" placeholder="ex: gepisopendata">
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Destino das Pull Requests</mat-label>
+            <input matInput formControlName="pr_target_branch" placeholder="production">
+            <mat-hint>Branch alvo para Pull Requests (padrão: production)</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="env-info-box">
+          <mat-icon>lightbulb</mat-icon>
+          <div class="env-info-text">
+            <strong>Dica para Desenvolvimento:</strong>
+            <span>Você pode definir valores padrão copiando o arquivo <code>.env.example</code> para <code>.env</code> na raiz do projeto (suporta <code>GITHUB_TOKEN</code>, <code>GITHUB_USERNAME</code>, <code>GITHUB_OWNER</code>, <code>GITHUB_REPO</code> e <code>GITHUB_PR_TARGET_BRANCH</code>).</span>
+          </div>
+        </div>
+      </form>
+
+      @if (isTesting()) {
+        <div class="test-progress">
+          <p>Testando conexão...</p>
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        </div>
+      }
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <button mat-button color="accent" (click)="testConnection()" [disabled]="configForm.invalid || isTesting() || isSaving()">
+        <mat-icon>security</mat-icon> Testar Conexão
+      </button>
+      <button mat-raised-button color="primary" (click)="saveConfig()" [disabled]="configForm.invalid || isSaving()">
+        <mat-icon>save</mat-icon> Salvar Configuração
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
