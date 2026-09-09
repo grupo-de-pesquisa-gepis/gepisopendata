@@ -72,15 +72,27 @@
 
         <div class="layer-checkbox-list">
           @for (layer of availableLayers; track layer.key) {
-            <label class="layer-checkbox-row">
-              <input type="checkbox" 
-                     [checked]="isLayerChecked(layer.key)"
-                     (change)="onLayerCheckboxChange(layer.key, $event)">
-              <span class="layer-row-text">
-                <span class="layer-row-name">{{ layer.icon }} {{ layer.name }}</span>
-                <span class="layer-row-meta">{{ layer.featuresExpected }} feições · ~{{ layer.sizeEstimate }}</span>
-              </span>
-            </label>
+            <div class="layer-item-row-wrapper">
+              <label class="layer-checkbox-row">
+                <input type="checkbox" 
+                       [checked]="isLayerChecked(layer.key)"
+                       (change)="onLayerCheckboxChange(layer.key, $event)">
+                <span class="layer-row-text">
+                  <span class="layer-row-name">{{ layer.icon }} {{ layer.name }}</span>
+                  <span class="layer-row-meta">{{ layer.featuresExpected }} feições · ~{{ layer.sizeEstimate }}</span>
+                </span>
+              </label>
+
+              <!-- Botão de Ajuda / Ponto de Interrogação para abrir modal explicativo -->
+              <button 
+                type="button" 
+                class="btn-layer-help" 
+                matTooltip="Exibir explicação e links oficiais do IBGE para {{ layer.name }}"
+                aria-label="Informações sobre a camada"
+                (click)="openLayerInfoModal(layer, $event)">
+                <mat-icon class="help-icon">help_outline</mat-icon>
+              </button>
+            </div>
           }
         </div>
 
@@ -231,3 +243,112 @@
   <main #mapContainer class="map-container"></main>
 
 </div>
+
+<!-- Modal Dialog com Explicação da Camada e Links Oficiais do IBGE -->
+@if (selectedLayerInfoForModal(); as info) {
+  <div class="modal-backdrop" (click)="closeLayerInfoModal()">
+    <div class="modal-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <!-- Cabeçalho do Modal -->
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">{{ info.icon }}</span>
+          <div>
+            <h2 class="modal-title">{{ info.name }}</h2>
+            <span class="modal-subtitle">Camada Cartográfica IBGE 2024 · {{ info.featuresExpected }} feições esperadas</span>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close" (click)="closeLayerInfoModal()" aria-label="Fechar diálogo">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Conteúdo do Modal -->
+      <div class="modal-body">
+        <!-- Descrição / Explicação detalhada -->
+        <section class="modal-section">
+          <h3 class="modal-section-title">
+            <mat-icon inline>info</mat-icon>
+            O que é esta camada?
+          </h3>
+          <p class="modal-description-text">
+            {{ info.detailedExplanation || info.description }}
+          </p>
+        </section>
+
+        <!-- Conceitos e Metodologia IBGE -->
+        @if (info.ibgeConcepts && info.ibgeConcepts.length > 0) {
+          <section class="modal-section">
+            <h3 class="modal-section-title">
+              <mat-icon inline>schema</mat-icon>
+              Conceitos e Metodologia do IBGE
+            </h3>
+            <ul class="modal-concepts-list">
+              @for (concept of info.ibgeConcepts; track concept) {
+                <li>{{ concept }}</li>
+              }
+            </ul>
+          </section>
+        }
+
+        <!-- Informações Técnicas do Arquivo -->
+        <section class="modal-section">
+          <h3 class="modal-section-title">
+            <mat-icon inline>data_object</mat-icon>
+            Especificações Técnicas
+          </h3>
+          <div class="modal-tech-grid">
+            <div class="tech-item">
+              <span class="tech-label">Arquivo GeoJSON Padrão:</span>
+              <code class="tech-value">{{ info.fileName }}</code>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Tamanho Estimado:</span>
+              <span class="tech-value">{{ info.sizeEstimate }}</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Zoom Recomendado:</span>
+              <span class="tech-value">{{ info.recommendedZoom }}</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Sistema Geodésico:</span>
+              <span class="tech-value">SIRGAS 2000 (EPSG: 4674)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Links Oficiais do IBGE -->
+        @if (info.officialLinks && info.officialLinks.length > 0) {
+          <section class="modal-section links-section">
+            <h3 class="modal-section-title">
+              <mat-icon inline>open_in_new</mat-icon>
+              Documentação e Endpoints Oficiais do IBGE
+            </h3>
+            <div class="modal-links-list">
+              @for (link of info.officialLinks; track link.url) {
+                <div class="official-link-card" (click)="openExternalUrl(link.url, $event)">
+                  <div class="link-card-content">
+                    <div class="link-card-title">
+                      <span>{{ link.label }}</span>
+                      <mat-icon class="external-icon">launch</mat-icon>
+                    </div>
+                    @if (link.description) {
+                      <p class="link-card-desc">{{ link.description }}</p>
+                    }
+                    <code class="link-card-url">{{ link.url }}</code>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </div>
+
+      <!-- Rodapé do Modal -->
+      <div class="modal-footer">
+        <button type="button" class="btn-modal-primary" (click)="closeLayerInfoModal()">
+          Entendi / Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+}

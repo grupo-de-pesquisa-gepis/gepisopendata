@@ -13,8 +13,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatButtonModule } from '@angular/material/button';
 import * as L from 'leaflet';
+import { invoke } from '@tauri-apps/api/core';
 import { IbgeMalhasApiService } from '../../../../../../services/ibge-malhas-api.service';
+import { isTauri } from '../../../../../../services/environment';
 
 interface BasemapProvider {
   key: string;
@@ -22,6 +26,12 @@ interface BasemapProvider {
   url: string;
   options: L.TileLayerOptions;
   description: string;
+}
+
+interface LayerDocLink {
+  label: string;
+  url: string;
+  description?: string;
 }
 
 interface GeoJsonMeta {
@@ -33,6 +43,9 @@ interface GeoJsonMeta {
   featuresExpected: number;
   sizeEstimate: string;
   recommendedZoom: string;
+  detailedExplanation?: string;
+  ibgeConcepts?: string[];
+  officialLinks?: LayerDocLink[];
 }
 
 interface ActiveLayerEntry {
@@ -63,6 +76,30 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     featuresExpected: 1,
     sizeEstimate: '15 KB',
     recommendedZoom: 'Z = 0 a 3',
+    detailedExplanation:
+      'Representa o polígono limítrofe contínuo de toda a extensão territorial da República Federativa do Brasil, incluindo a porção continental e ilhas oceânicas integradas, conforme a Malha Municipal e Territorial 2024 do IBGE.',
+    ibgeConcepts: [
+      'Delimitação da fronteira internacional e da costa litorânea brasileira.',
+      'Base de referência para cálculos de área territorial total do país (8.510.417,771 km²).',
+      'Referencial geodésico oficial SIRGAS 2000.',
+    ],
+    officialLinks: [
+      {
+        label: 'Portal de Malhas Territoriais do IBGE',
+        url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html',
+        description: 'Página oficial de download e documentação técnica das malhas do IBGE.',
+      },
+      {
+        label: 'API de Malhas Geográficas do IBGE (v4 - Brasil)',
+        url: 'https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR',
+        description: 'Endpoint REST que fornece a malha vetorial do país em GeoJSON / TopoJSON.',
+      },
+      {
+        label: 'Repositório GeoFTP IBGE - Malha Brasil 2024',
+        url: 'https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2024/Brasil/BR/',
+        description: 'Diretório FTP oficial com os arquivos vetoriais Shapefile originais.',
+      },
+    ],
   },
   regioes: {
     key: 'regioes',
@@ -73,6 +110,29 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     featuresExpected: 5,
     sizeEstimate: '33 KB',
     recommendedZoom: 'Z = 4',
+    detailedExplanation:
+      'Divisão macrorregional oficial do território brasileiro criada pelo IBGE para fins estatísticos e de planejamento. Compreende as 5 Grandes Regiões: Norte (N), Nordeste (NE), Centro-Oeste (CO), Sudeste (SE) e Sul (S).',
+    ibgeConcepts: [
+      'Agregação de Unidades da Federação contíguas segundo critérios de semelhanças físicas, humanas, econômicas e sociais.',
+      'Códigos oficiais IBGE de 1 dígito: 1 (Norte), 2 (Nordeste), 3 (Sudeste), 4 (Sul), 5 (Centro-Oeste).',
+    ],
+    officialLinks: [
+      {
+        label: 'Divisão Regional do Brasil - IBGE Geociências',
+        url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/divisao-regional/15778-divisoes-regionais-do-brasil.html',
+        description: 'Histórico, notas metodológicas e evolução das divisões regionais brasileiras.',
+      },
+      {
+        label: 'API de Localidades do IBGE - Regiões',
+        url: 'https://servicodados.ibge.gov.br/api/v1/localidades/regioes',
+        description: 'Endpoint com a lista estruturada das 5 macrorregiões brasileiras.',
+      },
+      {
+        label: 'API de Malhas Geográficas do IBGE (v4 - Regiões)',
+        url: 'https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?intrarregiao=regiao',
+        description: 'Endpoint REST com os polígonos das 5 grandes regiões em formato GeoJSON.',
+      },
+    ],
   },
   uf: {
     key: 'uf',
@@ -83,6 +143,30 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     featuresExpected: 27,
     sizeEstimate: '117 KB',
     recommendedZoom: 'Z = 5 a 7',
+    detailedExplanation:
+      'Compreende os 26 Estados federados e o Distrito Federal. Constituem as subdivisões político-administrativas autônomas primárias da Federação brasileira.',
+    ibgeConcepts: [
+      'Identificados por código IBGE de 2 dígitos (ex: 11 Rondônia ... 35 São Paulo ... 53 DF).',
+      'O primeiro dígito do código estadual identifica a Grande Região à qual o Estado pertence.',
+      'Malha atualizada com os limites estaduais vigentes consolidados em 2024.',
+    ],
+    officialLinks: [
+      {
+        label: 'Estrutura Político-Administrativa dos Estados - IBGE',
+        url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/estrutura-territorial/15761-areas-dos-municipios.html',
+        description: 'Tabelas oficiais de áreas e limites das Unidades da Federação.',
+      },
+      {
+        label: 'API de Localidades do IBGE - Estados (UFs)',
+        url: 'https://servicodados.ibge.gov.br/api/v1/localidades/estados',
+        description: 'Consulta oficial com siglas, nomes e regiões de todos os 27 estados e DF.',
+      },
+      {
+        label: 'API de Malhas Geográficas do IBGE (v4 - Estados)',
+        url: 'https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?intrarregiao=UF',
+        description: 'Endpoint vetorial com os polígonos de todas as 27 UFs.',
+      },
+    ],
   },
   intermediarias: {
     key: 'intermediarias',
@@ -93,6 +177,30 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     featuresExpected: 133,
     sizeEstimate: '787 KB',
     recommendedZoom: 'Z = 6 a 8',
+    detailedExplanation:
+      'As 133 Regiões Geográficas Intermediárias correspondem a uma escala intermediária entre as UFs e as Regiões Imediatas, articuladas em torno de polos urbanos de maior porte e de influência regional e estadual.',
+    ibgeConcepts: [
+      'Instituídas na revisão da Divisão Regional do Brasil de 2017 pelo IBGE.',
+      'Articulam municípios em torno de cidades polo para oferta de serviços de alta complexidade e gestão pública regional.',
+      'Identificadas por código numérico de 4 dígitos (2 da UF + 2 de ordem).',
+    ],
+    officialLinks: [
+      {
+        label: 'Divisão Regional do Brasil em Regiões Geográficas 2017 (IBGE)',
+        url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/divisao-regional/23701-divisao-regional-do-brasil-em-regioes-geograficas-imediatas-e-regioes-geograficas-intermediarias.html',
+        description: 'Publicação oficial com a metodologia das Regiões Intermediárias e Imediatas.',
+      },
+      {
+        label: 'API de Localidades do IBGE - Regiões Intermediárias',
+        url: 'https://servicodados.ibge.gov.br/api/v1/localidades/regioes-intermediarias',
+        description: 'Lista completa das 133 Regiões Intermediárias do Brasil.',
+      },
+      {
+        label: 'API de Malhas Geográficas do IBGE (v4 - Intermediárias)',
+        url: 'https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?intrarregiao=regiao-intermediaria',
+        description: 'Polígonos vetoriais das 133 Regiões Geográficas Intermediárias.',
+      },
+    ],
   },
   imediatas: {
     key: 'imediatas',
@@ -103,6 +211,30 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     featuresExpected: 510,
     sizeEstimate: '1.4 MB',
     recommendedZoom: 'Z = 7 a 9',
+    detailedExplanation:
+      'As 510 Regiões Geográficas Imediatas têm como base a rede de relações dos municípios com um centro urbano principal para atendimento de necessidades imediatas (comércio, emprego, serviços de saúde e educação básica/secundária).',
+    ibgeConcepts: [
+      'Substituíram o antigo conceito de Micro-regiões a partir de 2017.',
+      'Estruturam o fluxo diário de deslocamento da população em busca de serviços essenciais.',
+      'Identificadas por código numérico de 6 dígitos.',
+    ],
+    officialLinks: [
+      {
+        label: 'Quadro Metodológico das Regiões Imediatas - IBGE',
+        url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/divisao-regional/23701-divisao-regional-do-brasil-em-regioes-geograficas-imediatas-e-regioes-geograficas-intermediarias.html',
+        description: 'Documento técnico e mapas de articulação regional.',
+      },
+      {
+        label: 'API de Localidades do IBGE - Regiões Imediatas',
+        url: 'https://servicodados.ibge.gov.br/api/v1/localidades/regioes-imediatas',
+        description: 'Lista completa e mapeamento das 510 Regiões Imediatas.',
+      },
+      {
+        label: 'API de Malhas Geográficas do IBGE (v4 - Imediatas)',
+        url: 'https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?intrarregiao=regiao-imediata',
+        description: 'Polígonos vetoriais das 510 Regiões Geográficas Imediatas.',
+      },
+    ],
   },
   municipios: {
     key: 'municipios',
@@ -113,6 +245,30 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     featuresExpected: 5571,
     sizeEstimate: '5.3 MB',
     recommendedZoom: 'Z = 8 a 18',
+    detailedExplanation:
+      'A Malha Municipal do IBGE reúne a totalidade dos 5.568 municípios brasileiros, além do Distrito Federal e do Distrito Estadual de Fernando de Noronha (PE), totalizando 5.570/5.571 unidades territoriais com base no Censo e atualizações de 2024.',
+    ibgeConcepts: [
+      'Menor unidade político-administrativa autônoma no Brasil dotada de governo próprio.',
+      'Cada município possui um código IBGE único de 7 dígitos (ex: 3550308 para São Paulo/SP).',
+      'Polígonos detalhados e simplificados com tolerância topológica de contiguidade.',
+    ],
+    officialLinks: [
+      {
+        label: 'Malha Municipal 2024 - Geociências IBGE',
+        url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html',
+        description: 'Downloads em SHP, KML e documentação da Malha Municipal 2024.',
+      },
+      {
+        label: 'API de Localidades do IBGE - Municípios',
+        url: 'https://servicodados.ibge.gov.br/api/v1/localidades/municipios',
+        description: 'Dados cadastrais, microrregião, mesorregião e estado de todos os municípios.',
+      },
+      {
+        label: 'API de Malhas Geográficas do IBGE (v4 - Municípios)',
+        url: 'https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?intrarregiao=municipio',
+        description: 'Endpoint REST com a geometria GeoJSON dos municípios do país.',
+      },
+    ],
   },
 };
 
@@ -259,7 +415,7 @@ function hslToHex(h: number, s: number, l: number): string {
 @Component({
   selector: 'app-padrao-mapas-view',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, MatButtonModule],
   templateUrl: './padrao-mapas-view.html',
   styleUrl: './padrao-mapas-view.css',
 })
@@ -292,6 +448,7 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
 
   selectedFeature = signal<SelectedFeatureInfo | null>(null);
   activeLayerKeys = signal<string[]>([]);
+  selectedLayerInfoForModal = signal<GeoJsonMeta | null>(null);
 
   checkedLayersState = signal<Record<string, boolean>>({
     pais: false,
@@ -802,5 +959,34 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.cdr.markForCheck();
+  }
+
+  openLayerInfoModal(layer: GeoJsonMeta, event?: MouseEvent): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.selectedLayerInfoForModal.set(layer);
+  }
+
+  closeLayerInfoModal(): void {
+    this.selectedLayerInfoForModal.set(null);
+  }
+
+  async openExternalUrl(url: string, event?: MouseEvent): Promise<void> {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (isTauri()) {
+      try {
+        await invoke('plugin:shell|open', { path: url });
+      } catch (err) {
+        console.warn('Falha ao abrir URL via Tauri shell, fallback para window.open:', err);
+        window.open(url, '_blank');
+      }
+    } else {
+      window.open(url, '_blank');
+    }
   }
 }
