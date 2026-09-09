@@ -178,17 +178,18 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     sizeEstimate: '787 KB',
     recommendedZoom: 'Z = 6 a 8',
     detailedExplanation:
-      'As 133 Regiões Geográficas Intermediárias correspondem a uma escala intermediária entre as UFs e as Regiões Imediatas, articuladas em torno de polos urbanos de maior porte e de influência regional e estadual.',
+      'As 133 Regiões Geográficas Intermediárias substituíram as antigas Mesorregiões a partir da revisão territorial do IBGE de 2017. Elas articulam as Regiões Imediatas em torno de polos de influência de maior hierarquia urbana para serviços de alta complexidade e gestão pública regional. No arquivo GeoJSON 2024 baixado, os dados refletem exclusivamente essa divisão atualizada.',
     ibgeConcepts: [
-      'Instituídas na revisão da Divisão Regional do Brasil de 2017 pelo IBGE.',
-      'Articulam municípios em torno de cidades polo para oferta de serviços de alta complexidade e gestão pública regional.',
-      'Identificadas por código numérico de 4 dígitos (2 da UF + 2 de ordem).',
+      'Substituição oficial das antigas Mesorregiões (vigentes entre 1989 e 2017) pela nova Divisão Regional do Brasil.',
+      'Articulam municípios e Regiões Imediatas em torno de metrópoles e capitais regionais.',
+      'Identificadas por código numérico IBGE de 4 dígitos (os 2 primeiros da UF + 2 de ordenação).',
+      'Nota sobre Microrregiões: as antigas micro/mesorregiões não constam mais nos arquivos vetoriais das malhas territoriais modernas do IBGE (2017 em diante).',
     ],
     officialLinks: [
       {
         label: 'Divisão Regional do Brasil em Regiões Geográficas 2017 (IBGE)',
         url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/divisao-regional/23701-divisao-regional-do-brasil-em-regioes-geograficas-imediatas-e-regioes-geograficas-intermediarias.html',
-        description: 'Publicação oficial com a metodologia das Regiões Intermediárias e Imediatas.',
+        description: 'Publicação oficial explicando a transição das antigas Meso/Microrregiões para Intermediárias/Imediatas.',
       },
       {
         label: 'API de Localidades do IBGE - Regiões Intermediárias',
@@ -212,22 +213,23 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     sizeEstimate: '1.4 MB',
     recommendedZoom: 'Z = 7 a 9',
     detailedExplanation:
-      'As 510 Regiões Geográficas Imediatas têm como base a rede de relações dos municípios com um centro urbano principal para atendimento de necessidades imediatas (comércio, emprego, serviços de saúde e educação básica/secundária).',
+      'As 510 Regiões Geográficas Imediatas substituíram diretamente as antigas Microrregiões a partir da revisão do IBGE em 2017. Elas delimitam a rede de relações e fluxos diários da população com um centro urbano polo para serviços imediatos (comércio, saúde básica, empregos e ensino). O arquivo GeoJSON 2024 baixado já adota essa classificação territorial oficial e não contém a camada antiga de microrregiões.',
     ibgeConcepts: [
-      'Substituíram o antigo conceito de Micro-regiões a partir de 2017.',
-      'Estruturam o fluxo diário de deslocamento da população em busca de serviços essenciais.',
-      'Identificadas por código numérico de 6 dígitos.',
+      'Substituição oficial das antigas Microrregiões (criadas em 1989 e descontinuadas nas malhas cartográficas em 2017).',
+      'Estruturam os deslocamentos habituais e a atratividade urbana em escala local/imediata.',
+      'Identificadas por código numérico IBGE de 6 dígitos.',
+      'Nota sobre Microrregiões: nos GeoJSONs de malhas cartográficas do IBGE 2024, a camada equivalente e oficial para estudos de escala local são as Regiões Imediatas.',
     ],
     officialLinks: [
       {
-        label: 'Quadro Metodológico das Regiões Imediatas - IBGE',
+        label: 'Metodologia das Regiões Imediatas e Intermediárias - IBGE',
         url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/divisao-regional/23701-divisao-regional-do-brasil-em-regioes-geograficas-imediatas-e-regioes-geograficas-intermediarias.html',
-        description: 'Documento técnico e mapas de articulação regional.',
+        description: 'Documento técnico detalhando por que as Microrregiões foram substituídas pelas Regiões Imediatas.',
       },
       {
         label: 'API de Localidades do IBGE - Regiões Imediatas',
         url: 'https://servicodados.ibge.gov.br/api/v1/localidades/regioes-imediatas',
-        description: 'Lista completa e mapeamento das 510 Regiões Imediatas.',
+        description: 'Lista completa e composição municipal das 510 Regiões Imediatas.',
       },
       {
         label: 'API de Malhas Geográficas do IBGE (v4 - Imediatas)',
