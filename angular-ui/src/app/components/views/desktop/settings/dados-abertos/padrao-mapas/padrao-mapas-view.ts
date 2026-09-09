@@ -64,7 +64,7 @@ interface SelectedFeatureInfo {
   area?: string;
 }
 
-const LAYER_ORDER = ['pais', 'regioes', 'uf', 'intermediarias', 'imediatas', 'municipios'];
+const LAYER_ORDER = ['pais', 'regioes', 'uf', 'intermediarias', 'imediatas', 'microrregioes', 'municipios'];
 
 const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
   pais: {
@@ -215,10 +215,10 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
     detailedExplanation:
       'As 510 Regiões Geográficas Imediatas substituíram diretamente as antigas Microrregiões a partir da revisão do IBGE em 2017. Elas delimitam a rede de relações e fluxos diários da população com um centro urbano polo para serviços imediatos (comércio, saúde básica, empregos e ensino). O arquivo GeoJSON 2024 baixado já adota essa classificação territorial oficial e não contém a camada antiga de microrregiões.',
     ibgeConcepts: [
-      'Substituição oficial das antigas Microrregiões (criadas em 1989 e descontinuadas nas malhas cartográficas em 2017).',
-      'Estruturam os deslocamentos habituais e a atratividade urbana em escala local/imediata.',
-      'Identificadas por código numérico IBGE de 6 dígitos.',
-      'Nota sobre Microrregiões: nos GeoJSONs de malhas cartográficas do IBGE 2024, a camada equivalente e oficial para estudos de escala local são as Regiões Imediatas.',
+       'Substituição oficial das antigas Microrregiões (criadas em 1989 e descontinuadas nas malhas cartográficas em 2017).',
+       'Estruturam os deslocamentos habituais e a atratividade urbana em escala local/imediata.',
+       'Identificadas por código numérico IBGE de 6 dígitos.',
+       'Nota sobre Microrregiões: nos GeoJSONs de malhas cartográficas do IBGE 2024, a camada equivalente e oficial para estudos de escala local são as Regiões Imediatas.',
     ],
     officialLinks: [
       {
@@ -235,6 +235,46 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
         label: 'API de Malhas Geográficas do IBGE (v4 - Imediatas)',
         url: 'https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?intrarregiao=regiao-imediata',
         description: 'Polígonos vetoriais das 510 Regiões Geográficas Imediatas.',
+      },
+    ],
+  },
+  microrregioes: {
+    key: 'microrregioes',
+    name: 'Microrregiões (558 - Legado 1989-2017)',
+    icon: '🏛️',
+    fileName: 'BR_Microrregioes_2016_minima.geojson',
+    description: '558 Microrregiões Geográficas (Histórico/Legado)',
+    featuresExpected: 558,
+    sizeEstimate: '1.6 MB',
+    recommendedZoom: 'Z = 7 a 9',
+    detailedExplanation:
+      'As 558 Microrregiões Geográficas integraram a Divisão Regional do Brasil instituída pelo IBGE em 1989 (Resolução PR-51/1989) e foram utilizadas em censos e pesquisas até 2017. Agrupavam municípios contíguos com características homogêneas de produção e integração espacial. Em 2017, foram sucedidas pelas Regiões Geográficas Imediatas. Esta camada disponibiliza a malha histórica oficial pronta para análises comparativas e séries temporais.',
+    ibgeConcepts: [
+      'Divisão regional histórica oficial vigente de 1989 até a reformulação de 2017.',
+      'Agrupamento de 558 unidades no território nacional subordinadas às 137 Mesorregiões.',
+      'Identificadas por código numérico IBGE de 5 dígitos (ex: 35061 para a Microrregião de São Paulo).',
+      'Em 2017, foram substituídas pelas 510 Regiões Geográficas Imediatas, que refletem as redes urbanas e fluxos diários atuais.',
+    ],
+    officialLinks: [
+      {
+        label: 'Divisão Regional do Brasil de 1989 (IBGE)',
+        url: 'https://www.ibge.gov.br/geociencias/organizacao-do-territorio/divisao-regional/15778-divisoes-regionais-do-brasil.html',
+        description: 'Histórico da divisão regional de 1989 com Mesorregiões e Microrregiões Geográficas.',
+      },
+      {
+        label: 'API de Localidades do IBGE - Microrregiões',
+        url: 'https://servicodados.ibge.gov.br/api/v1/localidades/microrregioes',
+        description: 'Endpoint com a lista histórica cadastral completa das 558 Microrregiões.',
+      },
+      {
+        label: 'Repositório GeoFTP IBGE - Shapefile Microrregiões 2016',
+        url: 'https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2016/Brasil/BR/br_microrregioes.zip',
+        description: 'Pacote ZIP com os arquivos Shapefile oficiais de microrregiões do IBGE.',
+      },
+      {
+        label: 'API de Malhas Geográficas do IBGE (v3 - Microrregiões)',
+        url: 'https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=microrregiao',
+        description: 'Endpoint REST com a geometria GeoJSON das 558 microrregiões.',
       },
     ],
   },
@@ -458,6 +498,7 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
     uf: false,
     intermediarias: false,
     imediatas: false,
+    microrregioes: false,
     municipios: false,
   });
 
@@ -821,6 +862,7 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
       case 'municipios':
       case 'imediatas':
       case 'intermediarias':
+      case 'microrregioes':
         return this.getMunicipioColor(properties);
       case 'regioes':
       default:

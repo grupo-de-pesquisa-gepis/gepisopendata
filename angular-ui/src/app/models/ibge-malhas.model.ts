@@ -10,7 +10,7 @@ export interface IbgeMalhaFileStatus {
 }
 
 export interface IbgeMalhaLevelStatus {
-  id: string; // 'pais' | 'regioes' | 'uf' | 'intermediarias' | 'imediatas' | 'municipios'
+  id: string; // 'pais' | 'regioes' | 'uf' | 'intermediarias' | 'imediatas' | 'microrregioes' | 'municipios'
   name: string;
   description: string;
   packageName: string;

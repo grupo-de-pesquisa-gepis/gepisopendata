@@ -127,6 +127,7 @@ export class IbgeMalhasApiService {
       uf: 'data/BR_uf_2024_minima.geojson',
       intermediarias: 'data/BR_intermediarias_2024_minima.geojson',
       imediatas: 'data/BR_imediatas_2024_minima.geojson',
+      microrregioes: 'data/BR_Microrregioes_2016_minima.geojson',
       municipios: 'data/BR_municipios_2024_minima.geojson',
     };
 

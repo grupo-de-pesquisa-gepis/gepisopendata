@@ -65,6 +65,7 @@ export class MalhasIbgeView implements OnInit {
     uf: 'minima',
     intermediarias: 'minima',
     imediatas: 'minima',
+    microrregioes: 'minima',
     municipios: 'minima',
   });
 

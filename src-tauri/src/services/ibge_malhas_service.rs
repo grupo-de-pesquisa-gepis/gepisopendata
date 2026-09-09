@@ -26,6 +26,8 @@ pub struct LevelMeta {
     pub expected_features: u32,
     pub intraregiao: Option<&'static str>,
     pub localidades_recurso: Option<&'static str>,
+    pub api_base: Option<&'static str>,
+    pub custom_shapefile_url: Option<&'static str>,
 }
 
 pub const LEVELS: &[LevelMeta] = &[
@@ -37,6 +39,8 @@ pub const LEVELS: &[LevelMeta] = &[
         expected_features: 1,
         intraregiao: None,
         localidades_recurso: None,
+        api_base: None,
+        custom_shapefile_url: None,
     },
     LevelMeta {
         id: "regioes",
@@ -46,6 +50,8 @@ pub const LEVELS: &[LevelMeta] = &[
         expected_features: 5,
         intraregiao: Some("regiao"),
         localidades_recurso: Some("regioes"),
+        api_base: None,
+        custom_shapefile_url: None,
     },
     LevelMeta {
         id: "uf",
@@ -55,6 +61,8 @@ pub const LEVELS: &[LevelMeta] = &[
         expected_features: 27,
         intraregiao: Some("UF"),
         localidades_recurso: Some("estados"),
+        api_base: None,
+        custom_shapefile_url: None,
     },
     LevelMeta {
         id: "intermediarias",
@@ -64,6 +72,8 @@ pub const LEVELS: &[LevelMeta] = &[
         expected_features: 133,
         intraregiao: Some("regiao-intermediaria"),
         localidades_recurso: Some("regioes-intermediarias"),
+        api_base: None,
+        custom_shapefile_url: None,
     },
     LevelMeta {
         id: "imediatas",
@@ -73,6 +83,21 @@ pub const LEVELS: &[LevelMeta] = &[
         expected_features: 510,
         intraregiao: Some("regiao-imediata"),
         localidades_recurso: Some("regioes-imediatas"),
+        api_base: None,
+        custom_shapefile_url: None,
+    },
+    LevelMeta {
+        id: "microrregioes",
+        name: "Microrregiões (558 - Legado)",
+        description: "558 Microrregiões Geográficas (Divisão Regional 1989-2017)",
+        package_name: "BR_Microrregioes_2016",
+        expected_features: 558,
+        intraregiao: Some("microrregiao"),
+        localidades_recurso: Some("microrregioes"),
+        api_base: Some("https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR"),
+        custom_shapefile_url: Some(
+            "https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2016/Brasil/BR/br_microrregioes.zip",
+        ),
     },
     LevelMeta {
         id: "municipios",
@@ -82,6 +107,8 @@ pub const LEVELS: &[LevelMeta] = &[
         expected_features: 5571,
         intraregiao: Some("municipio"),
         localidades_recurso: Some("municipios"),
+        api_base: None,
+        custom_shapefile_url: None,
     },
 ];
 
@@ -213,19 +240,24 @@ impl IbgeMalhasService {
         }
     }
 
-    pub fn build_geojson_url(intraregiao: Option<&str>, quality: &str) -> String {
+    pub fn build_geojson_url(meta: &LevelMeta, quality: &str) -> String {
+        let base_api = meta.api_base.unwrap_or(API_MALHAS);
         let mut url = format!(
             "{}?formato={}&qualidade={}",
-            API_MALHAS, GEOJSON_MIME, quality
+            base_api, GEOJSON_MIME, quality
         );
-        if let Some(intra) = intraregiao {
+        if let Some(intra) = meta.intraregiao {
             url.push_str(&format!("&intrarregiao={}", intra));
         }
         url
     }
 
-    pub fn build_shapefile_url(package_name: &str) -> String {
-        format!("{}/{}.zip", GEO_FTP_BASE, package_name)
+    pub fn build_shapefile_url(meta: &LevelMeta) -> String {
+        if let Some(custom_url) = meta.custom_shapefile_url {
+            custom_url.to_string()
+        } else {
+            format!("{}/{}.zip", GEO_FTP_BASE, meta.package_name)
+        }
     }
 
     pub async fn download_malha(
@@ -272,7 +304,7 @@ impl IbgeMalhasService {
             .build()
             .map_err(|e| format!("Falha ao instanciar cliente HTTP: {}", e))?;
 
-        let url = Self::build_geojson_url(meta.intraregiao, quality);
+        let url = Self::build_geojson_url(meta, quality);
         tracing::info!(level = meta.id, quality, url = %url, "Iniciando download do GeoJSON IBGE");
 
         let _ = app_handle.emit(
@@ -410,7 +442,7 @@ impl IbgeMalhasService {
             .build()
             .map_err(|e| format!("Falha ao instanciar cliente HTTP: {}", e))?;
 
-        let url = Self::build_shapefile_url(meta.package_name);
+        let url = Self::build_shapefile_url(meta);
         tracing::info!(package = meta.package_name, url = %url, "Iniciando download do Shapefile do GeoFTP");
 
         let _ = app_handle.emit(
@@ -665,9 +697,20 @@ impl IbgeMalhasService {
             }
         }
 
+        let mesorregiao = item.get("mesorregiao");
+        if let Some(meso) = mesorregiao {
+            if let Some(id) = meso.get("id") {
+                props.insert("cd_mesorregiao".to_string(), id.to_string());
+            }
+            if let Some(nome) = meso.get("nome").and_then(|v| v.as_str()) {
+                props.insert("nm_mesorregiao".to_string(), nome.to_string());
+            }
+        }
+
         let uf = item
             .get("UF")
-            .or_else(|| intermediaria.and_then(|i| i.get("UF")));
+            .or_else(|| intermediaria.and_then(|i| i.get("UF")))
+            .or_else(|| mesorregiao.and_then(|m| m.get("UF")));
         if let Some(u) = uf {
             if let Some(id) = u.get("id") {
                 props.insert("cd_uf".to_string(), id.to_string());
@@ -731,25 +774,42 @@ mod tests {
 
     #[test]
     fn test_build_geojson_urls() {
-        let url_pais = IbgeMalhasService::build_geojson_url(None, "minima");
+        let meta_pais = &LEVELS[0];
+        let url_pais = IbgeMalhasService::build_geojson_url(meta_pais, "minima");
         assert_eq!(
             url_pais,
             "https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?formato=application/vnd.geo+json&qualidade=minima"
         );
 
-        let url_uf = IbgeMalhasService::build_geojson_url(Some("UF"), "maxima");
+        let meta_uf = &LEVELS[2];
+        let url_uf = IbgeMalhasService::build_geojson_url(meta_uf, "maxima");
         assert_eq!(
             url_uf,
             "https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?formato=application/vnd.geo+json&qualidade=maxima&intrarregiao=UF"
+        );
+
+        let meta_micro = &LEVELS[5];
+        let url_micro = IbgeMalhasService::build_geojson_url(meta_micro, "minima");
+        assert_eq!(
+            url_micro,
+            "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo+json&qualidade=minima&intrarregiao=microrregiao"
         );
     }
 
     #[test]
     fn test_build_shapefile_url() {
-        let url = IbgeMalhasService::build_shapefile_url("BR_UF_2024");
+        let meta_uf = &LEVELS[2];
+        let url_uf = IbgeMalhasService::build_shapefile_url(meta_uf);
         assert_eq!(
-            url,
+            url_uf,
             "https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2024/Brasil/BR_UF_2024.zip"
+        );
+
+        let meta_micro = &LEVELS[5];
+        let url_micro = IbgeMalhasService::build_shapefile_url(meta_micro);
+        assert_eq!(
+            url_micro,
+            "https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2016/Brasil/BR/br_microrregioes.zip"
         );
     }
 
@@ -760,10 +820,11 @@ mod tests {
         fs::create_dir_all(&temp_dir).unwrap();
 
         let overview = IbgeMalhasService::get_status(&temp_dir);
-        assert_eq!(overview.levels.len(), 6);
+        assert_eq!(overview.levels.len(), 7);
         assert_eq!(overview.levels[0].id, "pais");
         assert_eq!(overview.levels[2].id, "uf");
-        assert_eq!(overview.levels[5].id, "municipios");
+        assert_eq!(overview.levels[5].id, "microrregioes");
+        assert_eq!(overview.levels[6].id, "municipios");
         assert_eq!(overview.total_files_count, 0);
 
         let _ = fs::remove_dir_all(&temp_dir);
