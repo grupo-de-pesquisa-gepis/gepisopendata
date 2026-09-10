@@ -80,6 +80,35 @@ export class AnalysisApiService {
     });
   }
 
+  async getVariablesPreview(
+    filePath: string,
+    columns: string[],
+    limit = 10
+  ): Promise<Record<string, string[]>> {
+    if (!isTauri() || columns.length === 0) {
+      return {};
+    }
+    try {
+      return await invoke<Record<string, string[]>>('get_variables_preview', {
+        filePath,
+        columns,
+        limit,
+      });
+    } catch (err) {
+      console.warn('Fallback para get_variable_sample individual:', err);
+      const result: Record<string, string[]> = {};
+      await Promise.all(
+        columns.map(async (col) => {
+          try {
+            const sample = await this.getVariableSample(filePath, col, limit);
+            result[col] = sample;
+          } catch {}
+        })
+      );
+      return result;
+    }
+  }
+
   async getExcelFiles(groupName: string): Promise<string[]> {
     if (!isTauri()) {
       return [];
