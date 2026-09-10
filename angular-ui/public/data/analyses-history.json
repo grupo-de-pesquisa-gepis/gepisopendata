@@ -2428,5 +2428,503 @@
         "type": "Num"
       }
     ]
+  },
+  {
+    "dictionary": "dicionário_dados_educação_básica.xlsx",
+    "files": [
+      "microdados_ed_basica_2024.csv",
+      "microdados_ed_basica_2023.csv",
+      "microdados_ed_basica_2022.csv",
+      "microdados_ed_basica_2021.csv",
+      "Tabela_Matricula_2025_V2.csv"
+    ],
+    "groupName": "Censo Escolar INEP",
+    "id": "e9c6acfe-8ee7-4714-9b3b-b95e8b1cb603",
+    "name": "Matrículas 2021-2025",
+    "publishedArtifacts": [
+      {
+        "createdAt": "2026-09-10T20:44:36.194Z",
+        "data": {
+          "x": [
+            "2025",
+            "2021",
+            "2023",
+            "2022",
+            "2024"
+          ],
+          "y": [
+            4824584,
+            2333849,
+            3893409,
+            3300905,
+            4215478
+          ]
+        },
+        "id": "6a763b8e-c755-4ea7-8aaa-bf0b5dbff684",
+        "label": "Mat Tempo Integral",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "chartType": "line",
+          "metric": "sum",
+          "showBarValues": true,
+          "statisticalType": "qualitativa_ordinal",
+          "valueVar": "QT_MAT_FUND_INT",
+          "valueVars": [
+            "QT_MAT_FUND_INT",
+            "QT_MAT_INF_CRE_INT",
+            "QT_MAT_FUND_AF_INT",
+            "QT_MAT_MED_INT",
+            "QT_MAT_INF_PRE_INT",
+            "QT_MAT_FUND_AI_INT",
+            "QT_MAT_INF_INT"
+          ]
+        },
+        "type": "barchart"
+      },
+      {
+        "createdAt": "2026-09-10T21:34:44.891Z",
+        "data": {
+          "series": [
+            {
+              "name": "QT_MAT_FUND_INT",
+              "values": [
+                2333849,
+                3300905,
+                3893409,
+                4215478,
+                4824584
+              ]
+            },
+            {
+              "name": "QT_MAT_INF_CRE_INT",
+              "values": [
+                2020202,
+                2242866,
+                2388335,
+                2490834,
+                2546537
+              ]
+            },
+            {
+              "name": "QT_MAT_FUND_AF_INT",
+              "values": [
+                1098780,
+                1634785,
+                1929273,
+                2046602,
+                2264070
+              ]
+            },
+            {
+              "name": "QT_MAT_MED_INT",
+              "values": [
+                1175760,
+                1460222,
+                1508933,
+                1687226,
+                1809737
+              ]
+            },
+            {
+              "name": "QT_MAT_INF_PRE_INT",
+              "values": [
+                583519,
+                652427,
+                757871,
+                837785,
+                930189
+              ]
+            },
+            {
+              "name": "QT_MAT_FUND_AI_INT",
+              "values": [
+                1235069,
+                1666120,
+                1964136,
+                2168876,
+                2560514
+              ]
+            },
+            {
+              "name": "QT_MAT_INF_INT",
+              "values": [
+                2603721,
+                2895293,
+                3146206,
+                3328619,
+                3476726
+              ]
+            }
+          ],
+          "x": [
+            "2021",
+            "2022",
+            "2023",
+            "2024",
+            "2025"
+          ],
+          "y": [
+            2333849,
+            3300905,
+            3893409,
+            4215478,
+            4824584
+          ]
+        },
+        "id": "c1241934-6e68-4da3-adc5-84a8737b9d58",
+        "label": "Matrículas Periodo Integral",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "chartType": "line",
+          "metric": "sum",
+          "showBarValues": true,
+          "statisticalType": "qualitativa_ordinal",
+          "valueVar": "QT_MAT_FUND_INT",
+          "valueVars": [
+            "QT_MAT_FUND_INT",
+            "QT_MAT_INF_CRE_INT",
+            "QT_MAT_FUND_AF_INT",
+            "QT_MAT_MED_INT",
+            "QT_MAT_INF_PRE_INT",
+            "QT_MAT_FUND_AI_INT",
+            "QT_MAT_INF_INT"
+          ]
+        },
+        "type": "linechart"
+      }
+    ],
+    "updatedAt": "2026-09-10T21:34:44.957389278+00:00",
+    "variables": [
+      {
+        "description": "Número de Matrículas da Educação Infantil - Creche",
+        "name": "QT_MAT_INF_CRE",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Especial Exclusiva",
+        "name": "QT_MAT_ESP_CE",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Cor/Raça Não Declarada",
+        "name": "QT_MAT_BAS_ND",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Categoria da escola privada",
+        "name": "TP_CATEGORIA_ESCOLA_PRIVADA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação de Jovens e Adultos (EJA)",
+        "name": "QT_MAT_EJA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação de Jovens e Adultos (EJA) - Ensino Fundamental",
+        "name": "QT_MAT_EJA_FUND",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Código da Unidade da Federação",
+        "name": "CO_UF",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Cor/Raça Preta",
+        "name": "QT_MAT_BAS_PRETA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Código do Município",
+        "name": "CO_MUNICIPIO",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Nome da Região Geográfica",
+        "name": "NO_REGIAO",
+        "statisticalType": "qualitativa_nominal",
+        "type": "Char"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Fundamental - Tempo Integral",
+        "name": "QT_MAT_FUND_INT",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Turno Diurno",
+        "name": "QT_MAT_BAS_D",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Localização",
+        "name": "TP_LOCALIZACAO",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Divisão Intramunicipal - Código do Distrito",
+        "name": "CO_DISTRITO",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Especial Inclusiva",
+        "name": "QT_MAT_ESP_CC",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Até 3 anos de idade",
+        "name": "QT_MAT_BAS_0_3",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Infantil - Creche - Tempo Integral",
+        "name": "QT_MAT_INF_CRE_INT",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação de Jovens e Adultos (EJA) - Ensino Médio",
+        "name": "QT_MAT_EJA_MED",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Fundamental - Anos Finais",
+        "name": "QT_MAT_FUND_AF",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Entre 6 e 10 anos de idade",
+        "name": "QT_MAT_BAS_6_10",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Fundamental - Anos Finais - Tempo Integral",
+        "name": "QT_MAT_FUND_AF_INT",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica",
+        "name": "QT_MAT_BAS",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Médio - Tempo Integral",
+        "name": "QT_MAT_MED_INT",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Entre 11 e 14 anos de idade",
+        "name": "QT_MAT_BAS_11_14",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Entre 15 e 17 anos de idade",
+        "name": "QT_MAT_BAS_15_17",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Cor/Raça Branca",
+        "name": "QT_MAT_BAS_BRANCA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Entre 4 e 5 anos de idade",
+        "name": "QT_MAT_BAS_4_5",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Dependência Administrativa",
+        "name": "TP_DEPENDENCIA",
+        "statisticalType": "qualitativa_nominal",
+        "type": "Num"
+      },
+      {
+        "description": "Localização diferenciada da escola",
+        "name": "TP_LOCALIZACAO_DIFERENCIADA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Médio",
+        "name": "QT_MAT_MED",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Infantil - Pré-Escola - Tempo Integral",
+        "name": "QT_MAT_INF_PRE_INT",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Infantil",
+        "name": "QT_MAT_INF",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Nome da Unidade da Federação",
+        "name": "NO_UF",
+        "statisticalType": "qualitativa_nominal",
+        "type": "Char"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Com 18 ou mais anos de idade",
+        "name": "QT_MAT_BAS_18_MAIS",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Nome da Escola",
+        "name": "NO_ENTIDADE",
+        "statisticalType": "qualitativa_nominal",
+        "type": "Char"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Fundamental - Anos Iniciais",
+        "name": "QT_MAT_FUND_AI",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Código da Região Geográfica",
+        "name": "CO_REGIAO",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Sigla da Unidade da Federação",
+        "name": "SG_UF",
+        "statisticalType": "qualitativa_nominal",
+        "type": "Char"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Cor/Raça Indígena",
+        "name": "QT_MAT_BAS_INDIGENA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Ano do Censo",
+        "name": "NU_ANO_CENSO",
+        "statisticalType": "qualitativa_ordinal",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Fundamental - Anos Iniciais - Tempo Integral",
+        "name": "QT_MAT_FUND_AI_INT",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Infantil - Tempo Integral",
+        "name": "QT_MAT_INF_INT",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Código da Escola",
+        "name": "CO_ENTIDADE",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Infantil - Pré-Escola",
+        "name": "QT_MAT_INF_PRE",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "",
+        "name": "QT_MAT_PROF_TEC",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Profissional",
+        "name": "QT_MAT_PROF",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Turno não aplicável  para turmas semipresenciais ou de Educação a Distância (EAD)",
+        "name": "QT_MAT_BAS_EAD",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Cor/Raça Parda",
+        "name": "QT_MAT_BAS_PARDA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Masculino",
+        "name": "QT_MAT_BAS_MASC",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas do Ensino Fundamental",
+        "name": "QT_MAT_FUND",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Nome do Município",
+        "name": "NO_MUNICIPIO",
+        "statisticalType": "qualitativa_nominal",
+        "type": "Char"
+      },
+      {
+        "description": "Número de Matrículas da Educação Especial",
+        "name": "QT_MAT_ESP",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Cor/Raça Amarela",
+        "name": "QT_MAT_BAS_AMARELA",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Feminino",
+        "name": "QT_MAT_BAS_FEM",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      },
+      {
+        "description": "Número de Matrículas da Educação Básica - Turno Noturno",
+        "name": "QT_MAT_BAS_N",
+        "statisticalType": "quantitativa_discreta",
+        "type": "Num"
+      }
+    ]
   }
 ]
