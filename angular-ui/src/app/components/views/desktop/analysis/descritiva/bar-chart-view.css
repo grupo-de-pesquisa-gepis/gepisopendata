@@ -214,6 +214,65 @@
   color: #5c6bc0;
 }
 
+.slot-classification-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(63, 81, 181, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.classification-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.slot-select-field {
+  width: 100%;
+}
+
+.slot-select-field ::ng-deep .mat-mdc-text-field-wrapper {
+  background-color: #ffffff;
+  padding: 0 8px;
+}
+
+.slot-select-field ::ng-deep .mat-mdc-form-field-flex {
+  height: 34px;
+  align-items: center;
+}
+
+.slot-select-field ::ng-deep .mat-mdc-select-value-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.mini-classification-field {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.mini-classification-field ::ng-deep .mat-mdc-text-field-wrapper {
+  background-color: #f8fafc;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+
+.mini-classification-field ::ng-deep .mat-mdc-form-field-flex {
+  height: 28px;
+  align-items: center;
+}
+
+.mini-classification-field ::ng-deep .mat-mdc-select-value-text {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #0f766e;
+}
+
 .metric-selector {
   margin-bottom: 20px;
 }

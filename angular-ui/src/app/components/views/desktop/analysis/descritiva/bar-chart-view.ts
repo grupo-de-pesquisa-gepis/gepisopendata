@@ -11,6 +11,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -39,6 +40,7 @@ import { AutoTooltipDirective } from '../../../../../directives';
     MatTooltipModule,
     MatDividerModule,
     MatSlideToggleModule,
+    MatSelectModule,
     FormsModule,
     PlotlyModule,
     AutoTooltipDirective,
@@ -96,6 +98,15 @@ export class BarChartView implements OnInit {
   graphData: any = null;
   private lastResults: Array<{ yVar: string; data: BarChartData }> = [];
 
+  statisticalTypes = [
+    { value: 'categorica_temporal_ano', label: 'Temporal (Ano)' },
+    { value: 'categorica_temporal_timestamp', label: 'Temporal (Timestamp)' },
+    { value: 'qualitativa_nominal', label: 'Qualitativa Nominal' },
+    { value: 'qualitativa_ordinal', label: 'Qualitativa Ordinal' },
+    { value: 'quantitativa_discreta', label: 'Quantitativa Discreta' },
+    { value: 'quantitativa_continua', label: 'Quantitativa Contínua' },
+  ];
+
   metricLabel = () => {
     switch(this.metric()) {
       case 'sum': return 'Soma';
@@ -106,6 +117,38 @@ export class BarChartView implements OnInit {
 
   isY(name: string): boolean {
     return this.valueVars().includes(name);
+  }
+
+  getVariableStatisticalType(varName: string): string {
+    const v = this.config()?.variables.find(item => item.name === varName);
+    return v?.statisticalType || 'quantitativa_discreta';
+  }
+
+  getStatisticalTypeLabel(typeValue: string): string {
+    const found = this.statisticalTypes.find(t => t.value === typeValue);
+    return found?.label || typeValue;
+  }
+
+  async onStatisticalTypeChange(varName: string, newType: string) {
+    const analysis = this.config();
+    if (!analysis) return;
+
+    const targetVar = analysis.variables.find(v => v.name === varName);
+    if (targetVar) {
+      targetVar.statisticalType = newType;
+      await this.stateService.saveAnalysis(analysis);
+      this.snackBar.open(
+        `Classificação de "${varName}" atualizada para "${this.getStatisticalTypeLabel(newType)}"`,
+        'OK',
+        { duration: 2500 }
+      );
+
+      if (this.categoryVar() === varName || this.isY(varName)) {
+        if (this.lastResults.length > 0 && this.categoryVar()) {
+          this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
+        }
+      }
+    }
   }
 
   ngOnInit() {
@@ -243,15 +286,13 @@ export class BarChartView implements OnInit {
     });
     const allCategories = Array.from(catSet);
 
-    // Ordenar categorias se for tipo ordinal ou temporal ano
-    if (statType === 'qualitativa_ordinal' || statType === 'categorica_temporal_ano') {
-      allCategories.sort((a, b) => {
-        const na = parseFloat(a);
-        const nb = parseFloat(b);
-        if (!isNaN(na) && !isNaN(nb)) return na - nb;
-        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-      });
-    }
+    // Ordenar categorias (numericamente se forem anos/números, ou alfabeticamente)
+    allCategories.sort((a, b) => {
+      const na = parseFloat(a);
+      const nb = parseFloat(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
     const isLine = this.chartType() === 'line';
     const showVals = this.showValues();
@@ -305,7 +346,8 @@ export class BarChartView implements OnInit {
         xaxis: { 
           title: cat, 
           type: plotlyType,
-          categoryorder: (statType === 'qualitativa_ordinal' || statType === 'categorica_temporal_ano') ? 'category ascending' : 'trace',
+          categoryorder: 'array',
+          categoryarray: allCategories,
           automargin: true 
         },
         yaxis: { 
@@ -337,9 +379,9 @@ export class BarChartView implements OnInit {
         return 'date';
       case 'quantitativa_continua':
       case 'quantitativa_discreta':
-        return 'linear';
+        return 'category'; // Default to category on X axis so years and discrete codes are distinct points!
       default:
-        return '-'; // Plotly auto-detect
+        return 'category';
     }
   }
 

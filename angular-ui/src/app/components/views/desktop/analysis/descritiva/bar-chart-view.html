@@ -45,6 +45,19 @@
                   }
                 </div>
               </div>
+
+              @if (categoryVar()) {
+                <div class="slot-classification-row">
+                  <span class="classification-label">Classificação Estatística:</span>
+                  <mat-form-field appearance="outline" class="slot-select-field" subscriptSizing="dynamic">
+                    <mat-select [value]="getVariableStatisticalType(categoryVar()!)" (selectionChange)="onStatisticalTypeChange(categoryVar()!, $event.value)">
+                      @for (t of statisticalTypes; track t.value) {
+                        <mat-option [value]="t.value">{{ t.label }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              }
             </div>
             
             <!-- Eixo Y (Múltiplas Variáveis) -->
@@ -132,6 +145,13 @@
                   </div>
                   <div class="var-meta">
                     <span class="var-type" [class.number]="v.type === 'Número'">{{ v.type }}</span>
+                    <mat-form-field appearance="outline" class="mini-classification-field" subscriptSizing="dynamic" (click)="$event.stopPropagation()">
+                      <mat-select [value]="getVariableStatisticalType(v.name)" (selectionChange)="onStatisticalTypeChange(v.name, $event.value)">
+                        @for (t of statisticalTypes; track t.value) {
+                          <mat-option [value]="t.value">{{ t.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
                     @if (v.description) {
                       <span class="var-desc-inline" appAutoTooltip>{{ v.description }}</span>
                     }
