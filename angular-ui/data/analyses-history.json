@@ -2441,8 +2441,48 @@
     "groupName": "Censo Escolar INEP",
     "id": "e9c6acfe-8ee7-4714-9b3b-b95e8b1cb603",
     "name": "Matrículas 2021-2025",
-    "publishedArtifacts": [],
-    "updatedAt": "2026-09-10T18:50:42.476488594+00:00",
+    "publishedArtifacts": [
+      {
+        "createdAt": "2026-09-10T20:44:36.194Z",
+        "data": {
+          "x": [
+            "2025",
+            "2021",
+            "2023",
+            "2022",
+            "2024"
+          ],
+          "y": [
+            4824584,
+            2333849,
+            3893409,
+            3300905,
+            4215478
+          ]
+        },
+        "id": "6a763b8e-c755-4ea7-8aaa-bf0b5dbff684",
+        "label": "Mat Tempo Integral",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "chartType": "line",
+          "metric": "sum",
+          "showBarValues": true,
+          "statisticalType": "qualitativa_ordinal",
+          "valueVar": "QT_MAT_FUND_INT",
+          "valueVars": [
+            "QT_MAT_FUND_INT",
+            "QT_MAT_INF_CRE_INT",
+            "QT_MAT_FUND_AF_INT",
+            "QT_MAT_MED_INT",
+            "QT_MAT_INF_PRE_INT",
+            "QT_MAT_FUND_AI_INT",
+            "QT_MAT_INF_INT"
+          ]
+        },
+        "type": "barchart"
+      }
+    ],
+    "updatedAt": "2026-09-10T20:44:36.281291799+00:00",
     "variables": [
       {
         "description": "Número de Matrículas da Educação Infantil - Creche",
@@ -2609,7 +2649,7 @@
       {
         "description": "Dependência Administrativa",
         "name": "TP_DEPENDENCIA",
-        "statisticalType": "quantitativa_discreta",
+        "statisticalType": "qualitativa_nominal",
         "type": "Num"
       },
       {
@@ -2681,7 +2721,7 @@
       {
         "description": "Ano do Censo",
         "name": "NU_ANO_CENSO",
-        "statisticalType": "quantitativa_discreta",
+        "statisticalType": "qualitativa_ordinal",
         "type": "Num"
       },
       {

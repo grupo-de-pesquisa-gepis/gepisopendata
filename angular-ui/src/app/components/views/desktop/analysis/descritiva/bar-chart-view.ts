@@ -396,12 +396,36 @@ export class BarChartView implements OnInit {
 
     const cat = this.categoryVar();
     const xVarInfo = analysis.variables.find(v => v.name === cat);
-    const primaryResult = this.lastResults[0];
+    const isLine = this.chartType() === 'line';
+
+    // Coletar todas as categorias únicas ordenadas
+    const catSet = new Set<string>();
+    this.lastResults.forEach(res => {
+      res.data.categories.forEach(c => catSet.add(c));
+    });
+    const allCategories = Array.from(catSet);
+    allCategories.sort((a, b) => {
+      const na = parseFloat(a);
+      const nb = parseFloat(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    const series = this.lastResults.map(item => {
+      const catToVal = new Map<string, number>();
+      item.data.categories.forEach((c, idx) => {
+        catToVal.set(c, item.data.values[idx]);
+      });
+      return {
+        name: item.yVar,
+        values: allCategories.map(c => catToVal.get(c) ?? 0)
+      };
+    });
 
     const artifact: AnalysisArtifact = {
       id: crypto.randomUUID(),
       label: label,
-      type: 'barchart',
+      type: isLine ? 'linechart' : 'barchart',
       params: {
         categoryVar: cat || '',
         valueVars: this.valueVars(),
@@ -412,8 +436,9 @@ export class BarChartView implements OnInit {
         showBarValues: this.showValues()
       },
       data: {
-        x: primaryResult.data.categories,
-        y: primaryResult.data.values
+        x: allCategories,
+        y: series[0]?.values || [],
+        series: series
       },
       createdAt: new Date().toISOString()
     };

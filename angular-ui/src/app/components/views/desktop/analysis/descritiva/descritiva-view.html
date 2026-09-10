@@ -103,7 +103,7 @@
                   @for (art of analysisConfig.publishedArtifacts; track art.id) {
                     <mat-card appearance="outlined" class="artifact-item-card" (click)="goToArtifact(analysisConfig.id!, art.id)" [appAutoTooltip]="art.label">
                       <mat-card-content>
-                        <mat-icon>{{ art.type === 'barchart' ? 'bar_chart' : 'description' }}</mat-icon>
+                        <mat-icon>{{ (art.type === 'linechart' || art.params?.chartType === 'line') ? 'show_chart' : (art.type === 'barchart' ? 'bar_chart' : 'description') }}</mat-icon>
                         <div class="art-info">
                           <span class="art-label" appAutoTooltip>{{ art.label }}</span>
                           <span class="art-date">{{ art.createdAt | date:'short' }}</span>
