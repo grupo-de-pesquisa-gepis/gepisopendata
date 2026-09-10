@@ -32,7 +32,7 @@
                             <mat-nav-list class="artifact-list">
                                 @for (artifact of analysis.publishedArtifacts; track artifact.id) {
                                     <a mat-list-item (click)="goToArtifact(analysis.id!, artifact.id)" [appAutoTooltip]="artifact.label" matTooltipPosition="after">
-                                        <mat-icon matListItemIcon>{{ artifact.type === 'barchart' ? 'bar_chart' : 'description' }}</mat-icon>
+                                        <mat-icon matListItemIcon>{{ (artifact.type === 'linechart' || artifact.params?.chartType === 'line') ? 'show_chart' : (artifact.type === 'barchart' ? 'bar_chart' : 'description') }}</mat-icon>
                                         <span matListItemTitle>{{ artifact.label }}</span>
                                     </a>
                                 }

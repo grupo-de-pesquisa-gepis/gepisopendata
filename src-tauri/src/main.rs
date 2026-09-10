@@ -55,6 +55,7 @@ fn main() {
             run_etl,
             get_barchart_data,
             get_variable_sample,
+            get_variables_preview,
             get_app_data_dir,
             save_analysis,
             get_analyses,

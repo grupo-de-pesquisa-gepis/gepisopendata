@@ -10,14 +10,20 @@ export interface VariableSpec {
   statisticalType?: string;
 }
 
+export interface ArtifactSeries {
+  name: string;
+  values: number[];
+}
+
 export interface AnalysisArtifact {
   id: string;
   label: string;
-  type: 'barchart' | 'table' | 'statistics';
+  type: 'barchart' | 'linechart' | 'table' | 'statistics';
   params: Record<string, any>;
   data?: {
     x: any[];
-    y: any[];
+    y?: any[];
+    series?: ArtifactSeries[];
   };
   xTitle?: string;
   yTitle?: string;

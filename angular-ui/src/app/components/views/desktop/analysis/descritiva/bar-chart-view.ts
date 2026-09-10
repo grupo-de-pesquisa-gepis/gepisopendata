@@ -11,6 +11,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -39,6 +40,7 @@ import { AutoTooltipDirective } from '../../../../../directives';
     MatTooltipModule,
     MatDividerModule,
     MatSlideToggleModule,
+    MatSelectModule,
     FormsModule,
     PlotlyModule,
     AutoTooltipDirective,
@@ -60,14 +62,19 @@ export class BarChartView implements OnInit {
     const vars = this.config()?.variables || [];
     const query = this.searchQuery().toLowerCase().trim();
     if (!query) return vars;
-    return vars.filter(v => v.name.toLowerCase().includes(query));
+    return vars.filter(v => v.name.toLowerCase().includes(query) || (v.description && v.description.toLowerCase().includes(query)));
   });
 
   categoryVar = signal<string | null>(null);
-  valueVar = signal<string | null>(null);
+  valueVars = signal<string[]>([]);
+  chartType = signal<'line' | 'bar'>('line');
   metric = signal<string>('count');
-  showBarValues = signal<boolean>(false);
+  showValues = signal<boolean>(false);
   isLoading = signal(false);
+  isLoadingPreview = signal(false);
+
+  previewCols = signal<string[]>([]);
+  previewRows = signal<Record<string, string>[]>([]);
 
   categoryDesc = computed(() => {
     const cat = this.categoryVar();
@@ -75,14 +82,30 @@ export class BarChartView implements OnInit {
     return this.config()?.variables.find(v => v.name === cat)?.description || null;
   });
 
-  valueDesc = computed(() => {
-    const val = this.valueVar();
-    if (!val) return null;
-    return this.config()?.variables.find(v => v.name === val)?.description || null;
+  selectedYVariablesInfo = computed(() => {
+    const vars = this.valueVars();
+    const allVars = this.config()?.variables || [];
+    return vars.map(name => {
+      const found = allVars.find(v => v.name === name);
+      return {
+        name,
+        type: found?.type || 'Número',
+        description: found?.description
+      };
+    });
   });
 
   graphData: any = null;
-  lastResultData: BarChartData | null = null;
+  private lastResults: Array<{ yVar: string; data: BarChartData }> = [];
+
+  statisticalTypes = [
+    { value: 'categorica_temporal_ano', label: 'Temporal (Ano)' },
+    { value: 'categorica_temporal_timestamp', label: 'Temporal (Timestamp)' },
+    { value: 'qualitativa_nominal', label: 'Qualitativa Nominal' },
+    { value: 'qualitativa_ordinal', label: 'Qualitativa Ordinal' },
+    { value: 'quantitativa_discreta', label: 'Quantitativa Discreta' },
+    { value: 'quantitativa_continua', label: 'Quantitativa Contínua' },
+  ];
 
   metricLabel = () => {
     switch(this.metric()) {
@@ -92,21 +115,59 @@ export class BarChartView implements OnInit {
     }
   }
 
+  isY(name: string): boolean {
+    return this.valueVars().includes(name);
+  }
+
+  getVariableStatisticalType(varName: string): string {
+    const v = this.config()?.variables.find(item => item.name === varName);
+    return v?.statisticalType || 'quantitativa_discreta';
+  }
+
+  getStatisticalTypeLabel(typeValue: string): string {
+    const found = this.statisticalTypes.find(t => t.value === typeValue);
+    return found?.label || typeValue;
+  }
+
+  async onStatisticalTypeChange(varName: string, newType: string) {
+    const analysis = this.config();
+    if (!analysis) return;
+
+    const targetVar = analysis.variables.find(v => v.name === varName);
+    if (targetVar) {
+      targetVar.statisticalType = newType;
+      await this.stateService.saveAnalysis(analysis);
+      this.snackBar.open(
+        `Classificação de "${varName}" atualizada para "${this.getStatisticalTypeLabel(newType)}"`,
+        'OK',
+        { duration: 2500 }
+      );
+
+      if (this.categoryVar() === varName || this.isY(varName)) {
+        if (this.lastResults.length > 0 && this.categoryVar()) {
+          this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
+        }
+      }
+    }
+  }
+
   ngOnInit() {
     if (!this.config()) {
       this.router.navigate(['/desktop/analysis/descritiva']);
     }
   }
 
-  toggleBarValues(show: boolean) {
-    this.showBarValues.set(show);
-    if (this.lastResultData && this.categoryVar()) {
-      this.preparePlotlyData(
-        this.lastResultData.categories, 
-        this.lastResultData.values, 
-        this.categoryVar()!, 
-        this.metric()
-      );
+  setChartType(type: 'line' | 'bar') {
+    this.chartType.set(type);
+    if (this.lastResults.length > 0 && this.categoryVar()) {
+      this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
+    }
+  }
+
+  toggleShowValues(show: boolean) {
+    this.showValues.set(show);
+    if (this.lastResults.length > 0 && this.categoryVar()) {
+      this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
     }
   }
 
@@ -119,23 +180,40 @@ export class BarChartView implements OnInit {
     this.updateChart();
   }
 
-  setY(name: string) {
-    if (this.valueVar() === name) {
-      this.valueVar.set(null);
+  toggleY(name: string) {
+    const current = this.valueVars();
+    if (current.includes(name)) {
+      this.valueVars.set(current.filter(v => v !== name));
     } else {
-      this.valueVar.set(name);
+      this.valueVars.set([...current, name]);
     }
+    this.updateChart();
+  }
+
+  removeY(name: string, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.valueVars.update(list => list.filter(v => v !== name));
+    this.updateChart();
+  }
+
+  clearAllY() {
+    this.valueVars.set([]);
     this.updateChart();
   }
 
   async updateChart() {
     const cat = this.categoryVar();
-    const val = this.valueVar() || cat;
+    const yVars = this.valueVars();
     const met = this.metric();
     const analysis = this.config();
 
     if (!cat || !analysis) {
       this.graphData = null;
+      this.previewCols.set([]);
+      this.previewRows.set([]);
+      this.lastResults = [];
       return;
     }
 
@@ -144,10 +222,26 @@ export class BarChartView implements OnInit {
       const appDataDir = await this.datasetApi.getAppDataDir();
       const filePath = `${appDataDir}/processed_data/${analysis.groupName}/analysis_ready.csv`;
       
-      const data = await this.analysisApi.getBarChartData(filePath, cat, val, met);
+      let results: Array<{ yVar: string; data: BarChartData }> = [];
 
-      this.lastResultData = data;
-      this.preparePlotlyData(data.categories, data.values, cat, met);
+      if (yVars.length === 0) {
+        const valCol = cat;
+        const data = await this.analysisApi.getBarChartData(filePath, cat, valCol, met);
+        results = [{ yVar: met === 'count' ? 'Frequência' : cat, data }];
+      } else {
+        results = await Promise.all(
+          yVars.map(async (y) => {
+            const data = await this.analysisApi.getBarChartData(filePath, cat, y, met);
+            return { yVar: y, data };
+          })
+        );
+      }
+
+      this.lastResults = results;
+      this.preparePlotlyData(results, cat, met);
+
+      // Carregar pré-visualização de linhas das variáveis selecionadas
+      this.fetchDataPreview(filePath, cat, yVars);
     } catch (err) {
       console.error('Erro ao gerar gráfico:', err);
       this.snackBar.open('Erro ao gerar gráfico: ' + err, 'Fechar', { duration: 5000 });
@@ -156,53 +250,122 @@ export class BarChartView implements OnInit {
     }
   }
 
-  preparePlotlyData(x: string[], y: number[], title: string, metric: string) {
+  private async fetchDataPreview(filePath: string, cat: string, yVars: string[]) {
+    const colsToPreview = Array.from(new Set([cat, ...yVars]));
+    this.isLoadingPreview.set(true);
+    try {
+      const sampleMap = await this.analysisApi.getVariablesPreview(filePath, colsToPreview, 10);
+      const maxLen = Math.max(0, ...Object.values(sampleMap).map(v => v.length));
+      const rows: Record<string, string>[] = [];
+      for (let i = 0; i < maxLen; i++) {
+        const row: Record<string, string> = {};
+        for (const col of colsToPreview) {
+          row[col] = sampleMap[col]?.[i] ?? '';
+        }
+        rows.push(row);
+      }
+      this.previewCols.set(colsToPreview);
+      this.previewRows.set(rows);
+    } catch (err) {
+      console.warn('Erro ao carregar pré-visualização das linhas:', err);
+    } finally {
+      this.isLoadingPreview.set(false);
+    }
+  }
+
+  preparePlotlyData(results: Array<{ yVar: string; data: BarChartData }>, cat: string, metric: string) {
     const analysis = this.config();
-    const xVarInfo = analysis?.variables.find(v => v.name === title);
+    const xVarInfo = analysis?.variables.find(v => v.name === cat);
     const statType = xVarInfo?.statisticalType;
     const plotlyType = this.mapToPlotlyType(statType);
 
-    // Create pairs and sort based on statistical type
-    let paired = x.map((val, i) => ({ x: val, y: y[i] }));
-    
-    if (statType === 'qualitativa_ordinal' || statType === 'categorica_temporal_ano') {
-      paired.sort((a, b) => {
-        const na = parseFloat(a.x);
-        const nb = parseFloat(b.x);
-        if (!isNaN(na) && !isNaN(nb)) return na - nb;
-        return a.x.localeCompare(b.x, undefined, { numeric: true, sensitivity: 'base' });
+    // Coletar todas as categorias únicas de todas as séries
+    const catSet = new Set<string>();
+    results.forEach(res => {
+      res.data.categories.forEach(c => catSet.add(c));
+    });
+    const allCategories = Array.from(catSet);
+
+    // Ordenar categorias (numericamente se forem anos/números, ou alfabeticamente)
+    allCategories.sort((a, b) => {
+      const na = parseFloat(a);
+      const nb = parseFloat(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    const isLine = this.chartType() === 'line';
+    const showVals = this.showValues();
+
+    const traces = results.map(item => {
+      const catToVal = new Map<string, number>();
+      item.data.categories.forEach((c, idx) => {
+        catToVal.set(c, item.data.values[idx]);
       });
-    }
 
-    const sortedX = paired.map(p => p.x);
-    const sortedY = paired.map(p => p.y);
+      const sortedY = allCategories.map(c => catToVal.get(c) ?? 0);
 
-    const trace: any = {
-      x: sortedX,
-      y: sortedY,
-      type: 'bar',
-      marker: { color: '#3f51b5' }
-    };
+      const trace: any = {
+        x: allCategories,
+        y: sortedY,
+        name: item.yVar,
+        type: isLine ? 'scatter' : 'bar',
+      };
 
-    if (this.showBarValues()) {
-      trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-      trace.textposition = 'auto';
-    }
+      if (isLine) {
+        trace.mode = showVals ? 'lines+markers+text' : 'lines+markers';
+        trace.line = { shape: 'linear', width: 2.8 };
+        trace.marker = { size: 7 };
+        if (showVals) {
+          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
+          trace.textposition = 'top center';
+        }
+      } else {
+        if (showVals) {
+          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
+          trace.textposition = 'auto';
+        }
+      }
+
+      return trace;
+    });
+
+    const yNames = this.valueVars().length > 0 
+      ? this.valueVars().join(', ') 
+      : (metric === 'count' ? 'Frequência' : cat);
+    
+    const chartTitle = `${this.metricLabel()} de ${yNames} por ${cat}`;
 
     this.graphData = {
-      data: [trace],
+      data: traces,
       layout: {
-        title: `${this.metricLabel()} de ${this.valueVar() || title} por ${title}`,
+        title: {
+          text: chartTitle,
+          font: { size: 15, color: '#1e293b' }
+        },
         xaxis: { 
-          title: title, 
+          title: cat, 
           type: plotlyType,
-          categoryorder: (statType === 'qualitativa_ordinal' || statType === 'categorica_temporal_ano') ? 'category ascending' : 'trace',
+          categoryorder: 'array',
+          categoryarray: allCategories,
           automargin: true 
         },
-        yaxis: { title: this.metricLabel(), automargin: true },
-        margin: { t: 50, b: 100, l: 60, r: 20 }
+        yaxis: { 
+          title: this.metricLabel(), 
+          automargin: true 
+        },
+        barmode: 'group',
+        hovermode: 'x unified',
+        showlegend: traces.length > 1 || isLine,
+        legend: {
+          orientation: 'h',
+          y: -0.22,
+          x: 0.5,
+          xanchor: 'center'
+        },
+        margin: { t: 50, b: 100, l: 65, r: 25 }
       },
-      config: { responsive: true, displayModeBar: false }
+      config: { responsive: true, displayModeBar: true }
     };
   }
 
@@ -216,14 +379,14 @@ export class BarChartView implements OnInit {
         return 'date';
       case 'quantitativa_continua':
       case 'quantitativa_discreta':
-        return 'linear';
+        return 'category'; // Default to category on X axis so years and discrete codes are distinct points!
       default:
-        return '-'; // Plotly auto-detect
+        return 'category';
     }
   }
 
   async publishArtifact() {
-    if (!this.lastResultData) return;
+    if (this.lastResults.length === 0) return;
 
     const label = prompt('Digite um rótulo para esta publicação:');
     if (!label) return;
@@ -233,21 +396,49 @@ export class BarChartView implements OnInit {
 
     const cat = this.categoryVar();
     const xVarInfo = analysis.variables.find(v => v.name === cat);
+    const isLine = this.chartType() === 'line';
+
+    // Coletar todas as categorias únicas ordenadas
+    const catSet = new Set<string>();
+    this.lastResults.forEach(res => {
+      res.data.categories.forEach(c => catSet.add(c));
+    });
+    const allCategories = Array.from(catSet);
+    allCategories.sort((a, b) => {
+      const na = parseFloat(a);
+      const nb = parseFloat(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    const series = this.lastResults.map(item => {
+      const catToVal = new Map<string, number>();
+      item.data.categories.forEach((c, idx) => {
+        catToVal.set(c, item.data.values[idx]);
+      });
+      return {
+        name: item.yVar,
+        values: allCategories.map(c => catToVal.get(c) ?? 0)
+      };
+    });
 
     const artifact: AnalysisArtifact = {
       id: crypto.randomUUID(),
       label: label,
-      type: 'barchart',
+      type: isLine ? 'linechart' : 'barchart',
       params: {
         categoryVar: cat || '',
-        valueVar: this.valueVar() || undefined,
+        valueVars: this.valueVars(),
+        valueVar: this.valueVars()[0] || undefined,
+        chartType: this.chartType(),
         metric: this.metric(),
-        statisticalType: xVarInfo?.statisticalType, // Persist for rendering
-        showBarValues: this.showBarValues()
+        statisticalType: xVarInfo?.statisticalType,
+        showBarValues: this.showValues()
       },
       data: {
-        x: this.lastResultData.categories,
-        y: this.lastResultData.values
+        x: allCategories,
+        y: series[0]?.values || [],
+        series: series
       },
       createdAt: new Date().toISOString()
     };

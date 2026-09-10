@@ -264,6 +264,56 @@ impl EtlService {
         Ok(values)
     }
 
+    /// Obtém uma prévia das primeiras N linhas das colunas selecionadas.
+    pub fn get_variables_preview(
+        file_path: &Path,
+        columns: &[String],
+        limit: usize,
+    ) -> Result<HashMap<String, Vec<String>>, String> {
+        tracing::info!("Starting get_variables_preview: file={:?}, columns={:?}, limit={}", file_path, columns, limit);
+
+        if !file_path.exists() {
+            return Err("Arquivo não encontrado".into());
+        }
+
+        if columns.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let sep = detect_delimiter_from_file(file_path);
+        let col_exprs: Vec<_> = columns
+            .iter()
+            .map(|c| col(c.as_str()).cast(DataType::String))
+            .collect();
+
+        let df = LazyCsvReader::new(file_path)
+            .with_has_header(true)
+            .with_separator(sep)
+            .with_encoding(CsvEncoding::LossyUtf8)
+            .with_infer_schema_length(Some(10000))
+            .with_ignore_errors(true)
+            .finish()
+            .map_err(|e| format!("Erro ao ler arquivo: {}", e))?
+            .select(col_exprs)
+            .limit(limit as u32)
+            .collect()
+            .map_err(|e| format!("Erro ao processar pré-visualização: {}", e))?;
+
+        let mut result = HashMap::new();
+        for col_name in columns {
+            if let Ok(col) = df.column(col_name) {
+                let values: Vec<String> = col
+                    .iter()
+                    .map(|v| v.to_string().replace('\"', ""))
+                    .collect();
+                result.insert(col_name.clone(), values);
+            }
+        }
+
+        tracing::info!("Variables preview retrieved successfully for {} columns", result.len());
+        Ok(result)
+    }
+
     /// Analisa todos os arquivos de um grupo para encontrar colunas comuns e formato predominante.
     pub fn analyze_group(
         registry_path: &Path,

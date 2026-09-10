@@ -44,6 +44,15 @@ pub async fn get_variable_sample(
 }
 
 #[tauri::command]
+pub async fn get_variables_preview(
+    file_path: String,
+    columns: Vec<String>,
+    limit: usize,
+) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+    EtlService::get_variables_preview(Path::new(&file_path), &columns, limit)
+}
+
+#[tauri::command]
 pub async fn save_analysis(
     app_handle: AppHandle,
     config: serde_json::Value,

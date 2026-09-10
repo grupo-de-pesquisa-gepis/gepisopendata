@@ -3,7 +3,7 @@
     <button mat-icon-button (click)="goBack()">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <h1>Gráficos de Barras</h1>
+    <h1>Gráficos de Linhas e Barras</h1>
   </div>
 
   <div class="content-grid">
@@ -12,31 +12,87 @@
       <!-- Selection Summary -->
       <mat-card appearance="outlined" class="summary-card">
         <mat-card-content>
+          <!-- Seletor do Tipo de Gráfico -->
+          <div class="chart-type-selector">
+            <span class="slot-label">Tipo de Gráfico</span>
+            <mat-button-toggle-group [ngModel]="chartType()" (ngModelChange)="setChartType($event)" class="full-width">
+              <mat-button-toggle value="line">
+                <mat-icon>show_chart</mat-icon> Linhas (Padrão)
+              </mat-button-toggle>
+              <mat-button-toggle value="bar">
+                <mat-icon>bar_chart</mat-icon> Barras
+              </mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+
           <div class="selection-summary">
+            <!-- Eixo X -->
             <div class="selection-slot" [class.active]="categoryVar()">
-              <span class="slot-label">Eixo X (Categorias)</span>
+              <div class="slot-header-row">
+                <span class="slot-label">Eixo X (Categorias)</span>
+                @if (categoryVar()) {
+                  <button type="button" class="btn-clear-slot" (click)="setX(categoryVar()!)" title="Remover variável do Eixo X">
+                    Limpar
+                  </button>
+                }
+              </div>
               <div class="slot-value">
                 <mat-icon>label</mat-icon>
                 <div class="var-details">
-                  <span class="var-name-display" appAutoTooltip>{{ categoryVar() || 'Nenhuma variável' }}</span>
+                  <span class="var-name-display" appAutoTooltip>{{ categoryVar() || 'Nenhuma variável selecionada' }}</span>
                   @if (categoryDesc()) {
                     <span class="var-description-display" appAutoTooltip>{{ categoryDesc() }}</span>
                   }
                 </div>
               </div>
+
+              @if (categoryVar()) {
+                <div class="slot-classification-row">
+                  <span class="classification-label">Classificação Estatística:</span>
+                  <mat-form-field appearance="outline" class="slot-select-field" subscriptSizing="dynamic">
+                    <mat-select [value]="getVariableStatisticalType(categoryVar()!)" (selectionChange)="onStatisticalTypeChange(categoryVar()!, $event.value)">
+                      @for (t of statisticalTypes; track t.value) {
+                        <mat-option [value]="t.value">{{ t.label }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              }
             </div>
             
-            <div class="selection-slot" [class.active]="valueVar()">
-              <span class="slot-label">Eixo Y (Valores)</span>
-              <div class="slot-value">
-                <mat-icon>numbers</mat-icon>
-                <div class="var-details">
-                  <span class="var-name-display" appAutoTooltip>{{ valueVar() || (metric() === 'count' ? 'Contagem Automática' : 'Nenhuma variável') }}</span>
-                  @if (valueDesc()) {
-                    <span class="var-description-display" appAutoTooltip>{{ valueDesc() }}</span>
+            <!-- Eixo Y (Múltiplas Variáveis) -->
+            <div class="selection-slot" [class.active]="valueVars().length > 0">
+              <div class="slot-header-row">
+                <span class="slot-label">Eixo Y (Valores / Séries)</span>
+                @if (valueVars().length > 0) {
+                  <button type="button" class="btn-clear-slot" (click)="clearAllY()" title="Limpar todas as variáveis do Eixo Y">
+                    Limpar Todas ({{ valueVars().length }})
+                  </button>
+                }
+              </div>
+              
+              @if (valueVars().length === 0) {
+                <div class="slot-value">
+                  <mat-icon>numbers</mat-icon>
+                  <div class="var-details">
+                    <span class="var-name-display" appAutoTooltip>
+                      {{ metric() === 'count' ? 'Frequência (Contagem Automática)' : 'Nenhuma variável selecionada' }}
+                    </span>
+                    <span class="var-description-display">Selecione uma ou mais variáveis na lista abaixo</span>
+                  </div>
+                </div>
+              } @else {
+                <div class="y-vars-chips-container">
+                  @for (v of selectedYVariablesInfo(); track v.name) {
+                    <div class="y-var-chip">
+                      <span class="chip-name" [title]="v.description || v.name">{{ v.name }}</span>
+                      <button type="button" class="btn-remove-chip" (click)="removeY(v.name, $event)" title="Remover esta variável">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
                   }
                 </div>
-              </div>
+              }
             </div>
           </div>
 
@@ -50,8 +106,8 @@
           </div>
 
           <div class="options-selector">
-            <mat-slide-toggle [checked]="showBarValues()" (change)="toggleBarValues($event.checked)">
-              Mostrar valores nas barras
+            <mat-slide-toggle [checked]="showValues()" (change)="toggleShowValues($event.checked)">
+              Mostrar valores no gráfico
             </mat-slide-toggle>
           </div>
 
@@ -76,11 +132,26 @@
             @for (v of filteredVariables(); track v.name) {
               <div class="variable-row" 
                    [class.is-x]="categoryVar() === v.name" 
-                   [class.is-y]="valueVar() === v.name">
+                   [class.is-y]="isY(v.name)">
                 <div class="var-info">
-                  <span class="var-name" appAutoTooltip>{{ v.name }}</span>
+                  <div class="var-name-row">
+                    <span class="var-name" appAutoTooltip>{{ v.name }}</span>
+                    @if (categoryVar() === v.name) {
+                      <span class="active-badge badge-x">Eixo X</span>
+                    }
+                    @if (isY(v.name)) {
+                      <span class="active-badge badge-y">Eixo Y</span>
+                    }
+                  </div>
                   <div class="var-meta">
                     <span class="var-type" [class.number]="v.type === 'Número'">{{ v.type }}</span>
+                    <mat-form-field appearance="outline" class="mini-classification-field" subscriptSizing="dynamic" (click)="$event.stopPropagation()">
+                      <mat-select [value]="getVariableStatisticalType(v.name)" (selectionChange)="onStatisticalTypeChange(v.name, $event.value)">
+                        @for (t of statisticalTypes; track t.value) {
+                          <mat-option [value]="t.value">{{ t.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
                     @if (v.description) {
                       <span class="var-desc-inline" appAutoTooltip>{{ v.description }}</span>
                     }
@@ -89,13 +160,13 @@
                 <div class="var-actions">
                   <button mat-icon-button (click)="setX(v.name)" 
                           [color]="categoryVar() === v.name ? 'primary' : ''"
-                          matTooltip="Usar no Eixo X">
+                          matTooltip="Definir no Eixo X">
                     <mat-icon>align_horizontal_left</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="setY(v.name)" 
-                          [color]="valueVar() === v.name ? 'primary' : ''"
-                          matTooltip="Usar no Eixo Y">
-                    <mat-icon>align_vertical_bottom</mat-icon>
+                  <button mat-icon-button (click)="toggleY(v.name)" 
+                          [color]="isY(v.name) ? 'accent' : ''"
+                          [matTooltip]="isY(v.name) ? 'Remover do Eixo Y' : 'Adicionar ao Eixo Y'">
+                    <mat-icon>{{ isY(v.name) ? 'check_circle' : 'align_vertical_bottom' }}</mat-icon>
                   </button>
                 </div>
               </div>
@@ -112,13 +183,21 @@
     <!-- Preview -->
     <mat-card appearance="outlined" class="preview-card">
       <mat-card-header>
-        <mat-card-title>Visualização</mat-card-title>
+        <div class="preview-card-header-content">
+          <mat-card-title>Visualização do Gráfico</mat-card-title>
+          @if (categoryVar()) {
+            <span class="preview-meta-badge">
+              {{ chartType() === 'line' ? '📈 Linhas' : '📊 Barras' }} · 
+              {{ valueVars().length > 0 ? (valueVars().length + ' série(s) Y') : '1 série' }}
+            </span>
+          }
+        </div>
       </mat-card-header>
       <mat-card-content>
         @if (isLoading()) {
           <div class="loading-state">
             <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-            <p>Calculando métricas via Polars...</p>
+            <p>Calculando métricas e agregação via Polars...</p>
           </div>
         }
         
@@ -130,11 +209,66 @@
             [useResizeHandler]="true"
             class="chart-container">
           </plotly-plot>
+
+          <!-- Seção de Pré-visualização de Linhas dos Dados -->
+          <div class="data-preview-section">
+            <div class="data-preview-header">
+              <div class="data-preview-title">
+                <mat-icon>table_chart</mat-icon>
+                <span>Amostra de Linhas das Variáveis Selecionadas</span>
+              </div>
+              <span class="data-preview-count">
+                {{ previewRows().length }} linhas de exemplo
+              </span>
+            </div>
+
+            @if (isLoadingPreview()) {
+              <div class="preview-table-loading">
+                <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                <span>Carregando amostra das colunas...</span>
+              </div>
+            } @else if (previewRows().length > 0) {
+              <div class="preview-table-wrapper">
+                <table class="preview-table">
+                  <thead>
+                    <tr>
+                      <th class="col-index">#</th>
+                      @for (col of previewCols(); track col) {
+                        <th>
+                          <div class="th-content">
+                            <span>{{ col }}</span>
+                            @if (categoryVar() === col) {
+                              <span class="axis-tag tag-x">Eixo X</span>
+                            } @else if (isY(col)) {
+                              <span class="axis-tag tag-y">Eixo Y</span>
+                            }
+                          </div>
+                        </th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of previewRows(); track $index) {
+                      <tr>
+                        <td class="col-index">{{ $index + 1 }}</td>
+                        @for (col of previewCols(); track col) {
+                          <td>{{ row[col] !== undefined && row[col] !== '' ? row[col] : '—' }}</td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div class="preview-table-footer">
+                <span>💡 Visualizando os primeiros registros consolidados do arquivo de análise para verificação dos valores.</span>
+              </div>
+            }
+          </div>
         }
 
         @if (!categoryVar() && !isLoading()) {
           <div class="empty-preview">
-            <mat-icon>bar_chart</mat-icon>
+            <mat-icon>show_chart</mat-icon>
             <p>Selecione as variáveis à esquerda para visualizar o gráfico.</p>
             <small>Escolha uma variável para o <strong>Eixo X</strong> para começar.</small>
           </div>

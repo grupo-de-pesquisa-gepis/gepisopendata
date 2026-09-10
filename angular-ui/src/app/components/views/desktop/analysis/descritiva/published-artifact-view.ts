@@ -96,7 +96,7 @@ export class PublishedArtifactView implements OnInit {
       this.analysis.set(targetAnalysis);
       this.artifact.set(targetArtifact);
 
-      if (targetArtifact.data && targetArtifact.type === 'barchart') {
+      if (targetArtifact.data && (targetArtifact.type === 'barchart' || targetArtifact.type === 'linechart')) {
         this.preparePlotlyData(targetArtifact);
       } else {
         this.error.set('Este artefato não contém dados persistidos ou é de um tipo sem suporte web.');
@@ -111,54 +111,93 @@ export class PublishedArtifactView implements OnInit {
   }
 
   preparePlotlyData(artifact: AnalysisArtifact, useTempValues = false) {
-    const { categoryVar, metric, statisticalType } = artifact.params;
+    const { categoryVar, metric, statisticalType, chartType } = artifact.params;
     const showValues = useTempValues ? this.tempShowBarValues : artifact.params.showBarValues;
+    const isLine = artifact.type === 'linechart' || chartType === 'line';
     
     // Initial mapping of labels (renaming)
-    const xValues = artifact.data?.x.map(val => 
+    const rawX = artifact.data?.x || [];
+    const xValues = rawX.map(val => 
       (artifact.xLabelMap && artifact.xLabelMap[val]) ? artifact.xLabelMap[val] : val
-    ) || [];
-    
-    const yValues = artifact.data?.y || [];
+    );
 
-    // Create pairs for sorting
-    let paired = xValues.map((val, i) => ({ x: val, y: yValues[i] }));
-    
-    // Sort if it's ordinal or temporal
-    if (statisticalType === 'qualitativa_ordinal' || statisticalType === 'categorica_temporal_ano') {
-      paired.sort((a, b) => {
-        const na = parseFloat(a.x);
-        const nb = parseFloat(b.x);
-        if (!isNaN(na) && !isNaN(nb)) return na - nb;
-        return a.x.localeCompare(b.x, undefined, { numeric: true, sensitivity: 'base' });
-      });
-    }
+    // Create sorted indices
+    const indices = xValues.map((_, i) => i);
+    indices.sort((a, b) => {
+      const na = parseFloat(xValues[a]);
+      const nb = parseFloat(xValues[b]);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return String(xValues[a]).localeCompare(String(xValues[b]), undefined, { numeric: true, sensitivity: 'base' });
+    });
 
-    const sortedX = paired.map(p => p.x);
-    const sortedY = paired.map(p => p.y);
-
+    const sortedX = indices.map(i => xValues[i]);
     const plotlyType = this.mapToPlotlyType(statisticalType);
 
-    const trace: any = {
-      x: sortedX,
-      y: sortedY,
-      type: 'bar',
-      marker: { color: '#3f51b5' }
-    };
+    let traces: any[] = [];
 
-    if (showValues) {
-      trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-      trace.textposition = 'auto';
+    if (artifact.data?.series && artifact.data.series.length > 0) {
+      traces = artifact.data.series.map(s => {
+        const sortedY = indices.map(i => s.values[i] ?? 0);
+        const trace: any = {
+          x: sortedX,
+          y: sortedY,
+          name: s.name,
+          type: isLine ? 'scatter' : 'bar',
+        };
+
+        if (isLine) {
+          trace.mode = showValues ? 'lines+markers+text' : 'lines+markers';
+          trace.line = { shape: 'linear', width: 2.8 };
+          trace.marker = { size: 7 };
+          if (showValues) {
+            trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
+            trace.textposition = 'top center';
+          }
+        } else {
+          if (showValues) {
+            trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
+            trace.textposition = 'auto';
+          }
+        }
+        return trace;
+      });
+    } else {
+      const rawY = artifact.data?.y || [];
+      const sortedY = indices.map(i => rawY[i] ?? 0);
+      const trace: any = {
+        x: sortedX,
+        y: sortedY,
+        name: artifact.params.valueVar || 'Valor',
+        type: isLine ? 'scatter' : 'bar',
+      };
+
+      if (isLine) {
+        trace.mode = showValues ? 'lines+markers+text' : 'lines+markers';
+        trace.line = { shape: 'linear', width: 2.8 };
+        trace.marker = { size: 7 };
+        if (showValues) {
+          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
+          trace.textposition = 'top center';
+        }
+      } else {
+        trace.marker = { color: '#3f51b5' };
+        if (showValues) {
+          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
+          trace.textposition = 'auto';
+        }
+      }
+      traces = [trace];
     }
 
     this.graphData = {
-      data: [trace],
+      data: traces,
       layout: {
         title: useTempValues ? this.tempLabel : artifact.label,
         xaxis: { 
           title: useTempValues ? this.tempXTitle : (artifact.xTitle || categoryVar), 
           type: plotlyType,
-          categoryorder: (statisticalType === 'qualitativa_ordinal' || statisticalType === 'categorica_temporal_ano') ? 'category ascending' : 'trace',
+          categoryorder: 'array',
+          categoryarray: sortedX,
           automargin: true 
         },
         yaxis: { 
@@ -167,9 +206,18 @@ export class PublishedArtifactView implements OnInit {
           ticksuffix: useTempValues ? this.tempYSuffix : (artifact.ySuffix || ''),
           automargin: true 
         },
-        margin: { t: 50, b: 100, l: 60, r: 20 }
+        barmode: 'group',
+        hovermode: 'x unified',
+        showlegend: traces.length > 1 || isLine,
+        legend: {
+          orientation: 'h',
+          y: -0.22,
+          x: 0.5,
+          xanchor: 'center'
+        },
+        margin: { t: 50, b: 100, l: 65, r: 25 }
       },
-      config: { responsive: true, displayModeBar: false }
+      config: { responsive: true, displayModeBar: true }
     };
   }
 
@@ -189,9 +237,9 @@ export class PublishedArtifactView implements OnInit {
         return 'date';
       case 'quantitativa_continua':
       case 'quantitativa_discreta':
-        return 'linear';
+        return 'category';
       default:
-        return '-'; // Plotly auto-detect
+        return 'category';
     }
   }
 
