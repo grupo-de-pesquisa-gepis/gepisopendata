@@ -2480,9 +2480,120 @@
           ]
         },
         "type": "barchart"
+      },
+      {
+        "createdAt": "2026-09-10T21:34:44.891Z",
+        "data": {
+          "series": [
+            {
+              "name": "QT_MAT_FUND_INT",
+              "values": [
+                2333849,
+                3300905,
+                3893409,
+                4215478,
+                4824584
+              ]
+            },
+            {
+              "name": "QT_MAT_INF_CRE_INT",
+              "values": [
+                2020202,
+                2242866,
+                2388335,
+                2490834,
+                2546537
+              ]
+            },
+            {
+              "name": "QT_MAT_FUND_AF_INT",
+              "values": [
+                1098780,
+                1634785,
+                1929273,
+                2046602,
+                2264070
+              ]
+            },
+            {
+              "name": "QT_MAT_MED_INT",
+              "values": [
+                1175760,
+                1460222,
+                1508933,
+                1687226,
+                1809737
+              ]
+            },
+            {
+              "name": "QT_MAT_INF_PRE_INT",
+              "values": [
+                583519,
+                652427,
+                757871,
+                837785,
+                930189
+              ]
+            },
+            {
+              "name": "QT_MAT_FUND_AI_INT",
+              "values": [
+                1235069,
+                1666120,
+                1964136,
+                2168876,
+                2560514
+              ]
+            },
+            {
+              "name": "QT_MAT_INF_INT",
+              "values": [
+                2603721,
+                2895293,
+                3146206,
+                3328619,
+                3476726
+              ]
+            }
+          ],
+          "x": [
+            "2021",
+            "2022",
+            "2023",
+            "2024",
+            "2025"
+          ],
+          "y": [
+            2333849,
+            3300905,
+            3893409,
+            4215478,
+            4824584
+          ]
+        },
+        "id": "c1241934-6e68-4da3-adc5-84a8737b9d58",
+        "label": "Matrículas Periodo Integral",
+        "params": {
+          "categoryVar": "NU_ANO_CENSO",
+          "chartType": "line",
+          "metric": "sum",
+          "showBarValues": true,
+          "statisticalType": "qualitativa_ordinal",
+          "valueVar": "QT_MAT_FUND_INT",
+          "valueVars": [
+            "QT_MAT_FUND_INT",
+            "QT_MAT_INF_CRE_INT",
+            "QT_MAT_FUND_AF_INT",
+            "QT_MAT_MED_INT",
+            "QT_MAT_INF_PRE_INT",
+            "QT_MAT_FUND_AI_INT",
+            "QT_MAT_INF_INT"
+          ]
+        },
+        "type": "linechart"
       }
     ],
-    "updatedAt": "2026-09-10T20:44:36.281291799+00:00",
+    "updatedAt": "2026-09-10T21:34:44.957389278+00:00",
     "variables": [
       {
         "description": "Número de Matrículas da Educação Infantil - Creche",
