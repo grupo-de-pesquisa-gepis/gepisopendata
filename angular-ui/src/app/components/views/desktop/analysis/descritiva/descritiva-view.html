@@ -108,6 +108,9 @@
                           <span class="art-label" appAutoTooltip>{{ art.label }}</span>
                           <span class="art-date">{{ art.createdAt | date:'short' }}</span>
                         </div>
+                        <button mat-icon-button class="artifact-delete-btn" (click)="deleteArtifact($event, analysisConfig.id!, art.id)" matTooltip="Remover gráfico">
+                          <mat-icon color="warn">delete</mat-icon>
+                        </button>
                       </mat-card-content>
                     </mat-card>
                   }
@@ -177,7 +180,7 @@
               <button mat-flat-button color="primary">Frequências</button>
               <button mat-flat-button color="primary">Medidas de Tendência</button>
               <button mat-flat-button color="primary" (click)="goToBarChart()">
-                <mat-icon>bar_chart</mat-icon> Gráficos de Barras
+                <mat-icon>bar_chart</mat-icon> Gráficos de Linhas/Barras
               </button>
               <button mat-flat-button color="primary">Cruzamentos</button>
             </div>

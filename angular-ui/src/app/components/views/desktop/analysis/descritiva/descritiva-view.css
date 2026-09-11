@@ -191,17 +191,33 @@
 .art-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .art-label {
   font-weight: 500;
   font-size: 0.9rem;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .art-date {
   font-size: 0.7rem;
   color: #999;
+}
+
+.artifact-delete-btn {
+  margin-left: auto;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.artifact-delete-btn:hover {
+  opacity: 1;
 }
 
 .analysis-placeholder {

@@ -96,6 +96,20 @@ export class DatasetStateService {
     }
   }
 
+  async deleteArtifact(analysisId: string, artifactId: string) {
+    try {
+      const analyses = this.allAnalyses();
+      const target = analyses.find(a => a.id === analysisId);
+      if (!target || !target.publishedArtifacts) return;
+
+      target.publishedArtifacts = target.publishedArtifacts.filter(art => art.id !== artifactId);
+      await this.saveAnalysis(target);
+    } catch (err) {
+      console.error('Erro ao deletar publicação/gráfico:', err);
+      throw err;
+    }
+  }
+
   setCurrentAnalysis(analysis: AnalysisConfig) {
     this.currentAnalysis.set(analysis);
   }

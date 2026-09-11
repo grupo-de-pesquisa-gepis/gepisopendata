@@ -10,8 +10,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 // Plotly via Window Integration (requires script in index.html)
 import { PlotlyModule } from 'angular-plotly.js';
@@ -20,6 +22,7 @@ import { DatasetStateService } from '../../../../../services/dataset-state.servi
 import { isTauri } from '../../../../../services/environment';
 import { AnalysisArtifact, AnalysisConfig } from '../../../../../models';
 import { AutoTooltipDirective } from '../../../../../directives';
+import { ConfirmDialog } from './descritiva-view';
 
 @Component({
   selector: 'app-published-artifact-view',
@@ -36,6 +39,7 @@ import { AutoTooltipDirective } from '../../../../../directives';
     MatSlideToggleModule,
     MatDividerModule,
     MatTooltipModule,
+    MatDialogModule,
     FormsModule,
     PlotlyModule,
     AutoTooltipDirective,
@@ -48,6 +52,7 @@ export class PublishedArtifactView implements OnInit {
   private router = inject(Router);
   private stateService = inject(DatasetStateService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   analysis = signal<AnalysisConfig | null>(null);
   artifact = signal<AnalysisArtifact | null>(null);
@@ -302,6 +307,33 @@ export class PublishedArtifactView implements OnInit {
     } catch (err) {
       console.error('Erro ao salvar alterações:', err);
       this.snackBar.open('Erro ao salvar alterações.', 'Fechar', { duration: 5000 });
+    }
+  }
+
+  async deleteArtifact() {
+    const art = this.artifact();
+    const config = this.analysis();
+    if (!art || !config?.id) return;
+
+    const res = await firstValueFrom(
+      this.dialog
+        .open(ConfirmDialog, {
+          data: {
+            title: 'Confirmar exclusão',
+            message: 'Tem certeza que deseja remover este gráfico publicado?',
+          },
+        })
+        .afterClosed()
+    );
+
+    if (res) {
+      try {
+        await this.stateService.deleteArtifact(config.id, art.id);
+        this.snackBar.open('Gráfico removido com sucesso', 'Fechar', { duration: 3000 });
+        this.goBack();
+      } catch (err: any) {
+        this.snackBar.open('Erro ao remover gráfico: ' + (err?.toString() || err), 'Fechar', { duration: 5000 });
+      }
     }
   }
 

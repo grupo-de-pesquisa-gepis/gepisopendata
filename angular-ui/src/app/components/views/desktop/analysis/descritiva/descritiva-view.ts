@@ -163,6 +163,28 @@ export class DescritivaView implements OnInit {
     }
   }
 
+  async deleteArtifact(event: Event, analysisId: string, artifactId: string) {
+    event.stopPropagation();
+    const res = await firstValueFrom(
+      this.dialog
+        .open(ConfirmDialog, {
+          data: {
+            title: 'Confirmar exclusão',
+            message: 'Tem certeza que deseja remover este gráfico publicado?',
+          },
+        })
+        .afterClosed()
+    );
+    if (res) {
+      try {
+        await this.stateService.deleteArtifact(analysisId, artifactId);
+        this.snackBar.open('Gráfico removido com sucesso', 'Fechar', { duration: 3000 });
+      } catch (err: any) {
+        this.snackBar.open('Erro ao remover gráfico: ' + (err?.toString() || err), 'Fechar', { duration: 5000 });
+      }
+    }
+  }
+
   async publishAnalysis(event: Event, id: string) {
     event.stopPropagation();
     const ok = await firstValueFrom(

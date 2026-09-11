@@ -10,6 +10,9 @@
         <button mat-icon-button (click)="startEdit()" matTooltip="Editar detalhes do gráfico">
           <mat-icon>edit</mat-icon>
         </button>
+        <button mat-icon-button (click)="deleteArtifact()" matTooltip="Remover este gráfico">
+          <mat-icon color="warn">delete</mat-icon>
+        </button>
       }
     } @else {
       <mat-form-field appearance="outline" class="edit-title-field">
