@@ -2553,13 +2553,13 @@
         },
         "type": "linechart",
         "xLabelMap": {},
-        "xTitle": "NU_ANO_CENSO ( Ano do Censo )",
+        "xTitle": "Ano do Censo",
         "yPrefix": "=>",
         "ySuffix": "",
         "yTitle": "Num de Matrículas"
       }
     ],
-    "updatedAt": "2026-09-11T14:15:03.484168728+00:00",
+    "updatedAt": "2026-09-16T14:01:13.644225843+00:00",
     "variables": [
       {
         "description": "Número de Matrículas da Educação Infantil - Creche",
