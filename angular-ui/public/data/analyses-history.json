@@ -2562,7 +2562,7 @@
           "percentDecimals": 1,
           "showBarValues": true,
           "statisticalType": "qualitativa_ordinal",
-          "valueDisplayMode": "value",
+          "valueDisplayMode": "both",
           "valueVar": "QT_MAT_FUND_INT",
           "valueVars": [
             "QT_MAT_FUND_INT",
@@ -2577,7 +2577,7 @@
         "percentBaseMode": "series_sum",
         "percentDecimals": 1,
         "type": "linechart",
-        "valueDisplayMode": "value",
+        "valueDisplayMode": "both",
         "xLabelMap": {},
         "xTitle": "Ano do Censo",
         "yPrefix": "=>",
@@ -2585,7 +2585,7 @@
         "yTitle": "Num de Matrículas"
       }
     ],
-    "updatedAt": "2026-09-16T19:36:23.181229905+00:00",
+    "updatedAt": "2026-09-16T19:37:56.227408657+00:00",
     "variables": [
       {
         "description": "Número de Matrículas da Educação Infantil - Creche",
