@@ -2444,6 +2444,7 @@
     "publishedArtifacts": [
       {
         "createdAt": "2026-09-10T21:34:44.891Z",
+        "customPercentTotal": null,
         "data": {
           "series": [
             {
@@ -2534,12 +2535,34 @@
         },
         "id": "c1241934-6e68-4da3-adc5-84a8737b9d58",
         "label": "Matrículas Periodo Integral",
+        "legendLabelMap": {
+          "QT_MAT_FUND_AF_INT": "Fund",
+          "QT_MAT_FUND_AI_INT": "Fund Anos Ini",
+          "QT_MAT_FUND_INT": "Fundamental",
+          "QT_MAT_INF_CRE_INT": "Inf Creche",
+          "QT_MAT_INF_INT": "Infantil",
+          "QT_MAT_INF_PRE_INT": "Infantil Pré",
+          "QT_MAT_MED_INT": "Médio"
+        },
         "params": {
           "categoryVar": "NU_ANO_CENSO",
           "chartType": "line",
+          "customPercentTotal": null,
+          "legendLabelMap": {
+            "QT_MAT_FUND_AF_INT": "Fund",
+            "QT_MAT_FUND_AI_INT": "Fund Anos Ini",
+            "QT_MAT_FUND_INT": "Fundamental",
+            "QT_MAT_INF_CRE_INT": "Inf Creche",
+            "QT_MAT_INF_INT": "Infantil",
+            "QT_MAT_INF_PRE_INT": "Infantil Pré",
+            "QT_MAT_MED_INT": "Médio"
+          },
           "metric": "sum",
+          "percentBaseMode": "series_sum",
+          "percentDecimals": 1,
           "showBarValues": true,
           "statisticalType": "qualitativa_ordinal",
+          "valueDisplayMode": "value",
           "valueVar": "QT_MAT_FUND_INT",
           "valueVars": [
             "QT_MAT_FUND_INT",
@@ -2551,7 +2574,10 @@
             "QT_MAT_INF_INT"
           ]
         },
+        "percentBaseMode": "series_sum",
+        "percentDecimals": 1,
         "type": "linechart",
+        "valueDisplayMode": "value",
         "xLabelMap": {},
         "xTitle": "Ano do Censo",
         "yPrefix": "=>",
@@ -2559,7 +2585,7 @@
         "yTitle": "Num de Matrículas"
       }
     ],
-    "updatedAt": "2026-09-16T14:01:13.644225843+00:00",
+    "updatedAt": "2026-09-16T19:36:23.181229905+00:00",
     "variables": [
       {
         "description": "Número de Matrículas da Educação Infantil - Creche",
