@@ -105,11 +105,70 @@
             </mat-button-toggle-group>
           </div>
 
-          <div class="options-selector">
-            <mat-slide-toggle [checked]="showValues()" (change)="toggleShowValues($event.checked)">
-              Mostrar valores no gráfico
-            </mat-slide-toggle>
+          <!-- Rótulos de Dados / Valores nos Pontos -->
+          <div class="data-labels-selector">
+            <span class="slot-label">Rótulos no Gráfico</span>
+            <mat-button-toggle-group [ngModel]="valueDisplayMode()" (ngModelChange)="setValueDisplayMode($event)" class="full-width button-toggle-grid">
+              <mat-button-toggle value="none" matTooltip="Ocultar rótulos">
+                <mat-icon>visibility_off</mat-icon> Nenhum
+              </mat-button-toggle>
+              <mat-button-toggle value="value" matTooltip="Apenas valor absoluto">
+                <mat-icon>tag</mat-icon> Valor
+              </mat-button-toggle>
+              <mat-button-toggle value="percent" matTooltip="Apenas porcentagem (%)">
+                <mat-icon>percent</mat-icon> %
+              </mat-button-toggle>
+              <mat-button-toggle value="both" matTooltip="Valor absoluto e percentual juntos">
+                <mat-icon>auto_graph</mat-icon> Ambos
+              </mat-button-toggle>
+            </mat-button-toggle-group>
           </div>
+
+          @if (valueDisplayMode() === 'percent' || valueDisplayMode() === 'both') {
+            <div class="percent-config-card">
+              <span class="sub-section-title">
+                <mat-icon>tune</mat-icon> Configuração do Percentual (%)
+              </span>
+              
+              <div class="percent-base-row">
+                <span class="mini-label">Base do Total (100%):</span>
+                <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                  <mat-select [ngModel]="percentBaseMode()" (ngModelChange)="setPercentBaseMode($event)">
+                    <mat-option value="series_sum">
+                      Automático (Soma da Série)
+                    </mat-option>
+                    @if (valueVars().length > 1) {
+                      <mat-option value="category_sum">
+                        Soma por Categoria (Eixo X)
+                      </mat-option>
+                    }
+                    <mat-option value="custom">
+                      Informar Total Personalizado
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              @if (percentBaseMode() === 'custom') {
+                <div class="custom-total-field">
+                  <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                    <mat-label>Total de Referência (Base 100%)</mat-label>
+                    <input matInput type="number" min="0" [ngModel]="customPercentTotal()" (ngModelChange)="setCustomPercentTotal($event)" placeholder="Ex: 100000">
+                    <mat-icon matSuffix>calculate</mat-icon>
+                  </mat-form-field>
+                </div>
+              }
+
+              <div class="decimals-row">
+                <span class="mini-label">Casas Decimais:</span>
+                <mat-button-toggle-group [ngModel]="percentDecimals()" (ngModelChange)="setPercentDecimals($event)" class="decimals-toggle full-width">
+                  <mat-button-toggle [value]="0">0 (25%)</mat-button-toggle>
+                  <mat-button-toggle [value]="1">1 (25,4%)</mat-button-toggle>
+                  <mat-button-toggle [value]="2">2 (25,42%)</mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+            </div>
+          }
 
           <button mat-flat-button color="accent" class="publish-btn" [disabled]="!categoryVar()" (click)="publishArtifact()">
             <mat-icon>publish</mat-icon> Publicar este Gráfico

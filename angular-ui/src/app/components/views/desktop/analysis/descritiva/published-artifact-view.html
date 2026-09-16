@@ -103,10 +103,57 @@
               <mat-divider></mat-divider>
 
               <div class="section-group">
-                <h4>Exibição de Dados</h4>
-                <mat-slide-toggle [(ngModel)]="tempShowBarValues" (change)="updatePreview()">
-                  Mostrar valores nas barras
-                </mat-slide-toggle>
+                <h4>Rótulos no Gráfico</h4>
+                <mat-button-toggle-group [(ngModel)]="tempValueDisplayMode" (ngModelChange)="updatePreview()" class="full-width edit-labels-toggle">
+                  <mat-button-toggle value="none" matTooltip="Ocultar rótulos">
+                    <mat-icon>visibility_off</mat-icon> Nenhum
+                  </mat-button-toggle>
+                  <mat-button-toggle value="value" matTooltip="Apenas valor">
+                    <mat-icon>tag</mat-icon> Valor
+                  </mat-button-toggle>
+                  <mat-button-toggle value="percent" matTooltip="Apenas porcentagem">
+                    <mat-icon>percent</mat-icon> %
+                  </mat-button-toggle>
+                  <mat-button-toggle value="both" matTooltip="Ambos">
+                    <mat-icon>auto_graph</mat-icon> Ambos
+                  </mat-button-toggle>
+                </mat-button-toggle-group>
+
+                @if (tempValueDisplayMode === 'percent' || tempValueDisplayMode === 'both') {
+                  <div class="edit-percent-card">
+                    <div class="edit-percent-field">
+                      <span class="mini-label">Base do Total (100%):</span>
+                      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                        <mat-select [(ngModel)]="tempPercentBaseMode" (ngModelChange)="updatePreview()">
+                          <mat-option value="series_sum">Automático (Soma da Série)</mat-option>
+                          @if ((artifact()?.data?.series?.length || 0) > 1) {
+                            <mat-option value="category_sum">Soma por Categoria (Eixo X)</mat-option>
+                          }
+                          <mat-option value="custom">Informar Total Personalizado</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                    </div>
+
+                    @if (tempPercentBaseMode === 'custom') {
+                      <div class="edit-percent-field">
+                        <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                          <mat-label>Total de Referência (Base 100%)</mat-label>
+                          <input matInput type="number" min="0" [(ngModel)]="tempCustomPercentTotal" (ngModelChange)="updatePreview()" placeholder="Ex: 100000">
+                          <mat-icon matSuffix>calculate</mat-icon>
+                        </mat-form-field>
+                      </div>
+                    }
+
+                    <div class="edit-percent-field">
+                      <span class="mini-label">Casas Decimais:</span>
+                      <mat-button-toggle-group [(ngModel)]="tempPercentDecimals" (ngModelChange)="updatePreview()" class="decimals-toggle full-width">
+                        <mat-button-toggle [value]="0">0 (25%)</mat-button-toggle>
+                        <mat-button-toggle [value]="1">1 (25,4%)</mat-button-toggle>
+                        <mat-button-toggle [value]="2">2 (25,42%)</mat-button-toggle>
+                      </mat-button-toggle-group>
+                    </div>
+                  </div>
+                }
               </div>
 
               <mat-divider></mat-divider>

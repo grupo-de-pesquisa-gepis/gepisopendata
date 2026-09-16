@@ -30,6 +30,10 @@ export interface AnalysisArtifact {
   xLabelMap?: Record<string, string>;
   yPrefix?: string;
   ySuffix?: string;
+  valueDisplayMode?: 'none' | 'value' | 'percent' | 'both';
+  percentBaseMode?: 'series_sum' | 'custom' | 'category_sum';
+  customPercentTotal?: number | null;
+  percentDecimals?: number;
   createdAt: string;
 }
 

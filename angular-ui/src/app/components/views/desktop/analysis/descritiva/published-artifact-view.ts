@@ -8,6 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatSelectModule } from '@angular/material/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -37,6 +39,8 @@ import { ConfirmDialog } from './descritiva-view';
     MatInputModule,
     MatSnackBarModule,
     MatSlideToggleModule,
+    MatButtonToggleModule,
+    MatSelectModule,
     MatDividerModule,
     MatTooltipModule,
     MatDialogModule,
@@ -67,7 +71,10 @@ export class PublishedArtifactView implements OnInit {
   tempYTitle = '';
   tempYPrefix = '';
   tempYSuffix = '';
-  tempShowBarValues = false;
+  tempValueDisplayMode: 'none' | 'value' | 'percent' | 'both' = 'none';
+  tempPercentBaseMode: 'series_sum' | 'custom' | 'category_sum' = 'series_sum';
+  tempCustomPercentTotal: number | null = null;
+  tempPercentDecimals: number = 1;
   tempXLabelMap: Record<string, string> = {};
 
   graphData: any = null;
@@ -115,11 +122,63 @@ export class PublishedArtifactView implements OnInit {
     }
   }
 
+  formatValueLabel(
+    val: number,
+    mode: 'none' | 'value' | 'percent' | 'both',
+    percentBase: 'series_sum' | 'custom' | 'category_sum',
+    customTotal: number | null,
+    decimals: number,
+    seriesValues: number[],
+    catIdx: number,
+    allSeriesMatrix?: number[][]
+  ): string {
+    if (mode === 'none') return '';
+
+    const valStr = Number.isInteger(val)
+      ? val.toLocaleString('pt-BR')
+      : val.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    if (mode === 'value') return valStr;
+
+    let total = 0;
+    if (percentBase === 'custom' && customTotal && customTotal > 0) {
+      total = customTotal;
+    } else if (percentBase === 'category_sum' && allSeriesMatrix && allSeriesMatrix.length > 0) {
+      total = allSeriesMatrix.reduce((sum, sVals) => sum + (Number(sVals[catIdx]) || 0), 0);
+    } else {
+      total = seriesValues.reduce((sum, v) => sum + (Number(v) || 0), 0);
+    }
+
+    const pct = total > 0 ? (val / total) * 100 : 0;
+    const pctStr = pct.toLocaleString('pt-BR', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }) + '%';
+
+    if (mode === 'percent') return pctStr;
+    return `${valStr} (${pctStr})`;
+  }
+
   preparePlotlyData(artifact: AnalysisArtifact, useTempValues = false) {
     const { categoryVar, metric, statisticalType, chartType } = artifact.params;
-    const showValues = useTempValues ? this.tempShowBarValues : artifact.params.showBarValues;
     const isLine = artifact.type === 'linechart' || chartType === 'line';
     
+    const mode: 'none' | 'value' | 'percent' | 'both' = useTempValues
+      ? this.tempValueDisplayMode
+      : (artifact.valueDisplayMode || artifact.params?.valueDisplayMode || (artifact.params?.showBarValues ? 'value' : 'none'));
+
+    const percentBase: 'series_sum' | 'custom' | 'category_sum' = useTempValues
+      ? this.tempPercentBaseMode
+      : (artifact.percentBaseMode || artifact.params?.percentBaseMode || 'series_sum');
+
+    const customTotal: number | null = useTempValues
+      ? this.tempCustomPercentTotal
+      : (artifact.customPercentTotal ?? (artifact.params?.customPercentTotal ?? null));
+
+    const decimals: number = useTempValues
+      ? this.tempPercentDecimals
+      : (artifact.percentDecimals ?? (artifact.params?.percentDecimals ?? 1));
+
     // Initial mapping of labels (renaming)
     const rawX = artifact.data?.x || [];
     const xValues = rawX.map(val => 
@@ -141,8 +200,12 @@ export class PublishedArtifactView implements OnInit {
     let traces: any[] = [];
 
     if (artifact.data?.series && artifact.data.series.length > 0) {
-      traces = artifact.data.series.map(s => {
-        const sortedY = indices.map(i => s.values[i] ?? 0);
+      const allSeriesMatrix: number[][] = artifact.data.series.map(s => 
+        indices.map(i => s.values[i] ?? 0)
+      );
+
+      traces = artifact.data.series.map((s, sIdx) => {
+        const sortedY = allSeriesMatrix[sIdx];
         const trace: any = {
           x: sortedX,
           y: sortedY,
@@ -150,25 +213,36 @@ export class PublishedArtifactView implements OnInit {
           type: isLine ? 'scatter' : 'bar',
         };
 
+        if (mode !== 'none') {
+          const textArr = sortedY.map((v, catIdx) =>
+            this.formatValueLabel(
+              v,
+              mode,
+              percentBase,
+              customTotal,
+              decimals,
+              sortedY,
+              catIdx,
+              allSeriesMatrix
+            )
+          );
+          trace.text = textArr;
+          trace.textposition = isLine ? 'top center' : 'auto';
+        }
+
         if (isLine) {
-          trace.mode = showValues ? 'lines+markers+text' : 'lines+markers';
+          trace.mode = mode !== 'none' ? 'lines+markers+text' : 'lines+markers';
           trace.line = { shape: 'linear', width: 2.8 };
           trace.marker = { size: 7 };
-          if (showValues) {
-            trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-            trace.textposition = 'top center';
-          }
-        } else {
-          if (showValues) {
-            trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-            trace.textposition = 'auto';
-          }
         }
+
         return trace;
       });
     } else {
       const rawY = artifact.data?.y || [];
       const sortedY = indices.map(i => rawY[i] ?? 0);
+      const allSeriesMatrix = [sortedY];
+
       const trace: any = {
         x: sortedX,
         y: sortedY,
@@ -176,20 +250,29 @@ export class PublishedArtifactView implements OnInit {
         type: isLine ? 'scatter' : 'bar',
       };
 
+      if (mode !== 'none') {
+        const textArr = sortedY.map((v, catIdx) =>
+          this.formatValueLabel(
+            v,
+            mode,
+            percentBase,
+            customTotal,
+            decimals,
+            sortedY,
+            catIdx,
+            allSeriesMatrix
+          )
+        );
+        trace.text = textArr;
+        trace.textposition = isLine ? 'top center' : 'auto';
+      }
+
       if (isLine) {
-        trace.mode = showValues ? 'lines+markers+text' : 'lines+markers';
+        trace.mode = mode !== 'none' ? 'lines+markers+text' : 'lines+markers';
         trace.line = { shape: 'linear', width: 2.8 };
         trace.marker = { size: 7 };
-        if (showValues) {
-          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-          trace.textposition = 'top center';
-        }
       } else {
         trace.marker = { color: '#3f51b5' };
-        if (showValues) {
-          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-          trace.textposition = 'auto';
-        }
       }
       traces = [trace];
     }
@@ -265,7 +348,10 @@ export class PublishedArtifactView implements OnInit {
     this.tempYTitle = art.yTitle || this.getMetricLabel(art.params.metric) || '';
     this.tempYPrefix = art.yPrefix || '';
     this.tempYSuffix = art.ySuffix || '';
-    this.tempShowBarValues = !!art.params.showBarValues;
+    this.tempValueDisplayMode = art.valueDisplayMode || art.params?.valueDisplayMode || (art.params?.showBarValues ? 'value' : 'none');
+    this.tempPercentBaseMode = art.percentBaseMode || art.params?.percentBaseMode || 'series_sum';
+    this.tempCustomPercentTotal = art.customPercentTotal ?? (art.params?.customPercentTotal ?? null);
+    this.tempPercentDecimals = art.percentDecimals ?? (art.params?.percentDecimals ?? 1);
     
     // Clone label map or initialize
     this.tempXLabelMap = art.xLabelMap ? { ...art.xLabelMap } : {};
@@ -289,7 +375,15 @@ export class PublishedArtifactView implements OnInit {
     art.yTitle = this.tempYTitle;
     art.yPrefix = this.tempYPrefix;
     art.ySuffix = this.tempYSuffix;
-    art.params.showBarValues = this.tempShowBarValues;
+    art.valueDisplayMode = this.tempValueDisplayMode;
+    art.percentBaseMode = this.tempPercentBaseMode;
+    art.customPercentTotal = this.tempCustomPercentTotal;
+    art.percentDecimals = this.tempPercentDecimals;
+    art.params.showBarValues = this.tempValueDisplayMode !== 'none';
+    art.params.valueDisplayMode = this.tempValueDisplayMode;
+    art.params.percentBaseMode = this.tempPercentBaseMode;
+    art.params.customPercentTotal = this.tempCustomPercentTotal;
+    art.params.percentDecimals = this.tempPercentDecimals;
     art.xLabelMap = { ...this.tempXLabelMap };
 
     // Update analysis config

@@ -74,6 +74,53 @@
   gap: 8px;
 }
 
+.edit-labels-toggle mat-button-toggle {
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 0 4px;
+}
+
+.edit-labels-toggle mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+.edit-percent-card {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-percent-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-percent-card mat-form-field ::ng-deep .mat-mdc-text-field-wrapper {
+  background-color: #ffffff;
+  border-radius: 6px;
+}
+
+.mini-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.decimals-toggle mat-button-toggle {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 .category-edit-list {
   display: flex;
   flex-direction: column;

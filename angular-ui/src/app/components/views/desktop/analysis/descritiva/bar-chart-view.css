@@ -277,9 +277,78 @@
   margin-bottom: 20px;
 }
 
-.options-selector {
-  margin-bottom: 20px;
+.data-labels-selector {
+  margin-bottom: 14px;
+}
+
+.data-labels-selector mat-button-toggle-group {
+  border-radius: 8px;
+}
+
+.data-labels-selector mat-button-toggle {
+  font-size: 0.78rem;
+  font-weight: 500;
   padding: 0 4px;
+}
+
+.data-labels-selector mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+.percent-config-card {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sub-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sub-section-title mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #0284c7;
+}
+
+.mini-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.percent-base-row,
+.custom-total-field,
+.decimals-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.percent-config-card mat-form-field ::ng-deep .mat-mdc-text-field-wrapper {
+  background-color: #ffffff;
+  border-radius: 6px;
+}
+
+.decimals-toggle mat-button-toggle {
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .publish-btn {

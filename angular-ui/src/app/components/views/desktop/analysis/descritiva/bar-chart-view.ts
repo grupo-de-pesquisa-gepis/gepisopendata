@@ -69,7 +69,10 @@ export class BarChartView implements OnInit {
   valueVars = signal<string[]>([]);
   chartType = signal<'line' | 'bar'>('line');
   metric = signal<string>('count');
-  showValues = signal<boolean>(false);
+  valueDisplayMode = signal<'none' | 'value' | 'percent' | 'both'>('none');
+  percentBaseMode = signal<'series_sum' | 'custom' | 'category_sum'>('series_sum');
+  customPercentTotal = signal<number | null>(null);
+  percentDecimals = signal<number>(1);
   isLoading = signal(false);
   isLoadingPreview = signal(false);
 
@@ -164,8 +167,29 @@ export class BarChartView implements OnInit {
     }
   }
 
-  toggleShowValues(show: boolean) {
-    this.showValues.set(show);
+  setValueDisplayMode(mode: 'none' | 'value' | 'percent' | 'both') {
+    this.valueDisplayMode.set(mode);
+    if (this.lastResults.length > 0 && this.categoryVar()) {
+      this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
+    }
+  }
+
+  setPercentBaseMode(mode: 'series_sum' | 'custom' | 'category_sum') {
+    this.percentBaseMode.set(mode);
+    if (this.lastResults.length > 0 && this.categoryVar()) {
+      this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
+    }
+  }
+
+  setCustomPercentTotal(total: number | null) {
+    this.customPercentTotal.set(total);
+    if (this.lastResults.length > 0 && this.categoryVar()) {
+      this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
+    }
+  }
+
+  setPercentDecimals(decimals: number) {
+    this.percentDecimals.set(decimals);
     if (this.lastResults.length > 0 && this.categoryVar()) {
       this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
     }
@@ -273,6 +297,43 @@ export class BarChartView implements OnInit {
     }
   }
 
+  formatValueLabel(
+    val: number,
+    mode: 'none' | 'value' | 'percent' | 'both',
+    percentBase: 'series_sum' | 'custom' | 'category_sum',
+    customTotal: number | null,
+    decimals: number,
+    seriesValues: number[],
+    catIdx: number,
+    allSeriesMatrix?: number[][]
+  ): string {
+    if (mode === 'none') return '';
+
+    const valStr = Number.isInteger(val)
+      ? val.toLocaleString('pt-BR')
+      : val.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    if (mode === 'value') return valStr;
+
+    let total = 0;
+    if (percentBase === 'custom' && customTotal && customTotal > 0) {
+      total = customTotal;
+    } else if (percentBase === 'category_sum' && allSeriesMatrix && allSeriesMatrix.length > 0) {
+      total = allSeriesMatrix.reduce((sum, sVals) => sum + (Number(sVals[catIdx]) || 0), 0);
+    } else {
+      total = seriesValues.reduce((sum, v) => sum + (Number(v) || 0), 0);
+    }
+
+    const pct = total > 0 ? (val / total) * 100 : 0;
+    const pctStr = pct.toLocaleString('pt-BR', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }) + '%';
+
+    if (mode === 'percent') return pctStr;
+    return `${valStr} (${pctStr})`;
+  }
+
   preparePlotlyData(results: Array<{ yVar: string; data: BarChartData }>, cat: string, metric: string) {
     const analysis = this.config();
     const xVarInfo = analysis?.variables.find(v => v.name === cat);
@@ -295,15 +356,22 @@ export class BarChartView implements OnInit {
     });
 
     const isLine = this.chartType() === 'line';
-    const showVals = this.showValues();
+    const mode = this.valueDisplayMode();
+    const percentBase = this.percentBaseMode();
+    const customTotal = this.customPercentTotal();
+    const decimals = this.percentDecimals();
 
-    const traces = results.map(item => {
+    // Matriz de valores Y de todas as séries ordenadas pelas categorias
+    const allSeriesMatrix: number[][] = results.map(item => {
       const catToVal = new Map<string, number>();
       item.data.categories.forEach((c, idx) => {
         catToVal.set(c, item.data.values[idx]);
       });
+      return allCategories.map(c => catToVal.get(c) ?? 0);
+    });
 
-      const sortedY = allCategories.map(c => catToVal.get(c) ?? 0);
+    const traces = results.map((item, sIdx) => {
+      const sortedY = allSeriesMatrix[sIdx];
 
       const trace: any = {
         x: allCategories,
@@ -312,19 +380,27 @@ export class BarChartView implements OnInit {
         type: isLine ? 'scatter' : 'bar',
       };
 
+      if (mode !== 'none') {
+        const textArr = sortedY.map((v, catIdx) =>
+          this.formatValueLabel(
+            v,
+            mode,
+            percentBase,
+            customTotal,
+            decimals,
+            sortedY,
+            catIdx,
+            allSeriesMatrix
+          )
+        );
+        trace.text = textArr;
+        trace.textposition = isLine ? 'top center' : 'auto';
+      }
+
       if (isLine) {
-        trace.mode = showVals ? 'lines+markers+text' : 'lines+markers';
+        trace.mode = mode !== 'none' ? 'lines+markers+text' : 'lines+markers';
         trace.line = { shape: 'linear', width: 2.8 };
         trace.marker = { size: 7 };
-        if (showVals) {
-          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-          trace.textposition = 'top center';
-        }
-      } else {
-        if (showVals) {
-          trace.text = sortedY.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2));
-          trace.textposition = 'auto';
-        }
       }
 
       return trace;
@@ -426,6 +502,10 @@ export class BarChartView implements OnInit {
       id: crypto.randomUUID(),
       label: label,
       type: isLine ? 'linechart' : 'barchart',
+      valueDisplayMode: this.valueDisplayMode(),
+      percentBaseMode: this.percentBaseMode(),
+      customPercentTotal: this.customPercentTotal(),
+      percentDecimals: this.percentDecimals(),
       params: {
         categoryVar: cat || '',
         valueVars: this.valueVars(),
@@ -433,7 +513,11 @@ export class BarChartView implements OnInit {
         chartType: this.chartType(),
         metric: this.metric(),
         statisticalType: xVarInfo?.statisticalType,
-        showBarValues: this.showValues()
+        showBarValues: this.valueDisplayMode() !== 'none',
+        valueDisplayMode: this.valueDisplayMode(),
+        percentBaseMode: this.percentBaseMode(),
+        customPercentTotal: this.customPercentTotal(),
+        percentDecimals: this.percentDecimals(),
       },
       data: {
         x: allCategories,
