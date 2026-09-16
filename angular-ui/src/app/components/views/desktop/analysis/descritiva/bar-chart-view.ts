@@ -73,6 +73,7 @@ export class BarChartView implements OnInit {
   percentBaseMode = signal<'series_sum' | 'custom' | 'category_sum'>('series_sum');
   customPercentTotal = signal<number | null>(null);
   percentDecimals = signal<number>(1);
+  legendLabelMap = signal<Record<string, string>>({});
   isLoading = signal(false);
   isLoadingPreview = signal(false);
 
@@ -190,6 +191,16 @@ export class BarChartView implements OnInit {
 
   setPercentDecimals(decimals: number) {
     this.percentDecimals.set(decimals);
+    if (this.lastResults.length > 0 && this.categoryVar()) {
+      this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
+    }
+  }
+
+  setLegendLabel(origName: string, customLabel: string) {
+    this.legendLabelMap.update(map => ({
+      ...map,
+      [origName]: customLabel
+    }));
     if (this.lastResults.length > 0 && this.categoryVar()) {
       this.preparePlotlyData(this.lastResults, this.categoryVar()!, this.metric());
     }
@@ -372,11 +383,12 @@ export class BarChartView implements OnInit {
 
     const traces = results.map((item, sIdx) => {
       const sortedY = allSeriesMatrix[sIdx];
+      const seriesLegendName = this.legendLabelMap()[item.yVar] || item.yVar;
 
       const trace: any = {
         x: allCategories,
         y: sortedY,
-        name: item.yVar,
+        name: seriesLegendName,
         type: isLine ? 'scatter' : 'bar',
       };
 
@@ -506,6 +518,7 @@ export class BarChartView implements OnInit {
       percentBaseMode: this.percentBaseMode(),
       customPercentTotal: this.customPercentTotal(),
       percentDecimals: this.percentDecimals(),
+      legendLabelMap: this.legendLabelMap(),
       params: {
         categoryVar: cat || '',
         valueVars: this.valueVars(),
@@ -518,6 +531,7 @@ export class BarChartView implements OnInit {
         percentBaseMode: this.percentBaseMode(),
         customPercentTotal: this.customPercentTotal(),
         percentDecimals: this.percentDecimals(),
+        legendLabelMap: this.legendLabelMap(),
       },
       data: {
         x: allCategories,

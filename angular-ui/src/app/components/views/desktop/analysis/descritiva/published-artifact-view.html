@@ -159,6 +159,23 @@
               <mat-divider></mat-divider>
 
               <div class="section-group">
+                <h4>Renomear Legendas (Séries)</h4>
+                <div class="category-edit-list">
+                  @for (sName of getSeriesList(); track sName) {
+                    <div class="category-edit-row">
+                      <span class="orig-cat" appAutoTooltip>{{ sName }}</span>
+                      <mat-icon>arrow_forward</mat-icon>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <input matInput [placeholder]="sName" [(ngModel)]="tempLegendLabelMap[sName]" (ngModelChange)="updatePreview()">
+                      </mat-form-field>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <div class="section-group">
                 <h4>Renomear Categorias (Eixo X)</h4>
                 <div class="category-edit-list">
                   @for (cat of artifact()?.data?.x; track cat) {

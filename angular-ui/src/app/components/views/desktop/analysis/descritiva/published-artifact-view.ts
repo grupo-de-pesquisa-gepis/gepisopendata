@@ -76,6 +76,7 @@ export class PublishedArtifactView implements OnInit {
   tempCustomPercentTotal: number | null = null;
   tempPercentDecimals: number = 1;
   tempXLabelMap: Record<string, string> = {};
+  tempLegendLabelMap: Record<string, string> = {};
 
   graphData: any = null;
 
@@ -159,6 +160,16 @@ export class PublishedArtifactView implements OnInit {
     return `${valStr} (${pctStr})`;
   }
 
+  getSeriesList(): string[] {
+    const art = this.artifact();
+    if (!art) return [];
+    if (art.data?.series && art.data.series.length > 0) {
+      return art.data.series.map(s => s.name);
+    }
+    const defaultName = art.params?.valueVar || (art.params?.metric === 'count' ? 'Frequência' : (art.params?.categoryVar || 'Valor'));
+    return [defaultName];
+  }
+
   preparePlotlyData(artifact: AnalysisArtifact, useTempValues = false) {
     const { categoryVar, metric, statisticalType, chartType } = artifact.params;
     const isLine = artifact.type === 'linechart' || chartType === 'line';
@@ -206,10 +217,11 @@ export class PublishedArtifactView implements OnInit {
 
       traces = artifact.data.series.map((s, sIdx) => {
         const sortedY = allSeriesMatrix[sIdx];
+        const seriesLegendName = (useTempValues ? this.tempLegendLabelMap[s.name] : artifact.legendLabelMap?.[s.name]) || s.name;
         const trace: any = {
           x: sortedX,
           y: sortedY,
-          name: s.name,
+          name: seriesLegendName,
           type: isLine ? 'scatter' : 'bar',
         };
 
@@ -242,11 +254,13 @@ export class PublishedArtifactView implements OnInit {
       const rawY = artifact.data?.y || [];
       const sortedY = indices.map(i => rawY[i] ?? 0);
       const allSeriesMatrix = [sortedY];
+      const defaultName = artifact.params?.valueVar || (artifact.params?.metric === 'count' ? 'Frequência' : (artifact.params?.categoryVar || 'Valor'));
+      const seriesLegendName = (useTempValues ? this.tempLegendLabelMap[defaultName] : artifact.legendLabelMap?.[defaultName]) || defaultName;
 
       const trace: any = {
         x: sortedX,
         y: sortedY,
-        name: artifact.params.valueVar || 'Valor',
+        name: seriesLegendName,
         type: isLine ? 'scatter' : 'bar',
       };
 
@@ -353,8 +367,9 @@ export class PublishedArtifactView implements OnInit {
     this.tempCustomPercentTotal = art.customPercentTotal ?? (art.params?.customPercentTotal ?? null);
     this.tempPercentDecimals = art.percentDecimals ?? (art.params?.percentDecimals ?? 1);
     
-    // Clone label map or initialize
+    // Clone label maps or initialize
     this.tempXLabelMap = art.xLabelMap ? { ...art.xLabelMap } : {};
+    this.tempLegendLabelMap = art.legendLabelMap ? { ...art.legendLabelMap } : {};
     
     this.isEditing.set(true);
   }
@@ -385,6 +400,8 @@ export class PublishedArtifactView implements OnInit {
     art.params.customPercentTotal = this.tempCustomPercentTotal;
     art.params.percentDecimals = this.tempPercentDecimals;
     art.xLabelMap = { ...this.tempXLabelMap };
+    art.legendLabelMap = { ...this.tempLegendLabelMap };
+    art.params.legendLabelMap = { ...this.tempLegendLabelMap };
 
     // Update analysis config
     const artifactIndex = config.publishedArtifacts?.findIndex(a => a.id === art.id);

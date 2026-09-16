@@ -28,6 +28,7 @@ export interface AnalysisArtifact {
   xTitle?: string;
   yTitle?: string;
   xLabelMap?: Record<string, string>;
+  legendLabelMap?: Record<string, string>;
   yPrefix?: string;
   ySuffix?: string;
   valueDisplayMode?: 'none' | 'value' | 'percent' | 'both';
