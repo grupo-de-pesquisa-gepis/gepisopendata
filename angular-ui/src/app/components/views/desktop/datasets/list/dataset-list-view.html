@@ -25,9 +25,15 @@
             </mat-panel-title>
             <mat-panel-description>
               {{ group.items.length }} dataset(s) nesta coleção
-              <button mat-icon-button color="warn" matTooltip="Excluir todo o grupo" (click)="deleteGroup($event, group.name)">
-                <mat-icon>delete_sweep</mat-icon>
-              </button>
+              @if (!isGroupReadOnly(group)) {
+                <button mat-icon-button color="warn" matTooltip="Excluir todo o grupo" (click)="deleteGroup($event, group.name)">
+                  <mat-icon>delete_sweep</mat-icon>
+                </button>
+              } @else {
+                <span class="readonly-group-tag" matTooltip="Grupo oficial protegido">
+                  <mat-icon inline>lock</mat-icon> Oficial
+                </span>
+              }
             </mat-panel-description>
           </mat-expansion-panel-header>
 
@@ -35,8 +41,8 @@
             @for (item of group.items; track item.id) {
               <mat-card class="dataset-card" [class.missing]="item.exists === false" appearance="outlined">
                 <mat-card-header>
-                  <div mat-card-avatar class="format-icon">
-                    {{ item.formato | uppercase }}
+                  <div mat-card-avatar class="format-icon" [class.spatial-avatar]="item.isSpatial">
+                    {{ item.isSpatial ? 'MAP' : (item.formato | uppercase) }}
                   </div>
                   <mat-card-title appAutoTooltip>
                     {{ item.tituloCurto }}
@@ -44,11 +50,23 @@
                       <mat-icon color="warn" matTooltip="Arquivos locais não encontrados" class="status-icon">warning</mat-icon>
                     }
                   </mat-card-title>
-                  <mat-card-subtitle appAutoTooltip>{{ item.orgaoEmissao }} - Ref: {{ item.dataReferencia }}</mat-card-subtitle>
+                  <mat-card-subtitle appAutoTooltip>{{ item.orgaoEmissao || item.fonte }} - Ref: {{ item.dataReferencia || item.ano }}</mat-card-subtitle>
                 </mat-card-header>
 
                 <mat-card-content>
-                  <p class="description" appAutoTooltip>{{ item.tituloLongo }}</p>
+                  <p class="description" appAutoTooltip>{{ item.tituloLongo || item.descricao }}</p>
+
+                  <div class="badge-row">
+                    @if (item.isReadOnly) {
+                      <span class="badge-tag readonly-badge"><mat-icon inline>lock</mat-icon> Somente Leitura</span>
+                    }
+                    @if (item.isSpatial) {
+                      <span class="badge-tag spatial-badge"><mat-icon inline>map</mat-icon> Geoespacial</span>
+                    }
+                    @if (item.isSystem) {
+                      <span class="badge-tag system-badge"><mat-icon inline>verified</mat-icon> Oficial</span>
+                    }
+                  </div>
 
                   <div class="meta-row">
                     <span class="meta-item">
@@ -83,6 +101,11 @@
                 </mat-card-content>
 
                 <mat-card-actions align="end">
+                  @if (item.isSpatial) {
+                    <a mat-button color="primary" routerLink="/desktop/settings/dados-abertos/padrao-mapas" matTooltip="Visualizar no Mapa Cartográfico">
+                      <mat-icon>map</mat-icon> Mapa
+                    </a>
+                  }
                   @if (item.localPath) {
                     <button mat-icon-button (click)="openFolder(item.localPath)" matTooltip="Abrir Pasta Local">
                       <mat-icon>folder_open</mat-icon>
@@ -93,18 +116,24 @@
                       <mat-icon>open_in_new</mat-icon>
                     </button>
                   }
-                  @if (item.exists === false && item.urls) {
+                  @if (item.exists === false && item.urls && !item.isReadOnly) {
                     <button mat-button color="warn" (click)="redownload(item)" [disabled]="isRedownloading() === item.id">
                       <mat-icon>refresh</mat-icon> Baixar Novamente
                     </button>
                   }
                   <span class="spacer"></span>
-                  <button mat-icon-button color="accent" matTooltip="Colaborar no GitHub" (click)="collaborate(item)" [disabled]="isCollaborating() === item.id">
-                    <mat-icon>cloud_upload</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" (click)="deleteDataset(item)" matTooltip="Excluir Dataset">
-                    <mat-icon>delete</mat-icon>
-                  </button>
+                  @if (!item.isReadOnly && !item.isSystem) {
+                    <button mat-icon-button color="accent" matTooltip="Colaborar no GitHub" (click)="collaborate(item)" [disabled]="isCollaborating() === item.id">
+                      <mat-icon>cloud_upload</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteDataset(item)" matTooltip="Excluir Dataset">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  } @else {
+                    <mat-icon color="primary" matTooltip="Conjunto de dados protegido do sistema (somente-leitura)" class="lock-icon">
+                      lock
+                    </mat-icon>
+                  }
                 </mat-card-actions>
               </mat-card>
             }

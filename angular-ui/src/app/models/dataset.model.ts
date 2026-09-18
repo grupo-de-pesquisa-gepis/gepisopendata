@@ -18,6 +18,10 @@ export interface DatasetMetadata {
   descricao?: string;
   fonte?: string;
   isSerieHistorica?: boolean;
+  isReadOnly?: boolean;
+  isSpatial?: boolean;
+  isSystem?: boolean;
+  category?: string;
   urls?: string;
 }
 
@@ -28,3 +32,4 @@ export interface DatasetEntry extends DatasetMetadata {
   files?: string[];
   dateAdded?: string;
 }
+

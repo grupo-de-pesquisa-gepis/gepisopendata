@@ -52,7 +52,22 @@ export class DatasetListView implements OnInit {
     this.loadDatasets();
   }
 
+  isGroupReadOnly(group: { name: string; items: DatasetEntry[] }): boolean {
+    return (
+      group.items.some((i) => i.isReadOnly || i.isSystem) ||
+      group.name.startsWith('IBGE -') ||
+      group.name.startsWith('INEP - Censo Escolar Georreferenciado')
+    );
+  }
+
   async deleteDataset(item: DatasetEntry) {
+    if (item.isReadOnly || item.isSystem) {
+      this.snackBar.open('Este conjunto de dados é oficial do sistema e não pode ser excluído.', 'OK', {
+        duration: 4000,
+      });
+      return;
+    }
+
     const confirmed = await ask(
       `Tem certeza que deseja excluir o dataset "${item.tituloCurto}"? Todos os arquivos locais serão removidos.`,
       {
@@ -77,6 +92,13 @@ export class DatasetListView implements OnInit {
 
   async deleteGroup(event: Event, groupName: string) {
     event.stopPropagation();
+    if (groupName.startsWith('IBGE -') || groupName.startsWith('INEP - Censo Escolar Georreferenciado')) {
+      this.snackBar.open('Este grupo é oficial do sistema e protegido contra exclusão.', 'OK', {
+        duration: 4000,
+      });
+      return;
+    }
+
     const targetGroup = groupName === 'Sem Grupo' ? '' : groupName;
 
     const confirmed = await ask(

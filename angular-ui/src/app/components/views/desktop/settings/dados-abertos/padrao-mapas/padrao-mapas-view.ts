@@ -18,6 +18,7 @@ import { MatButtonModule } from '@angular/material/button';
 import * as L from 'leaflet';
 import { invoke } from '@tauri-apps/api/core';
 import { IbgeMalhasApiService } from '../../../../../../services/ibge-malhas-api.service';
+import { IbgeCnefeApiService } from '../../../../../../services/ibge-cnefe-api.service';
 import { isTauri } from '../../../../../../services/environment';
 
 interface BasemapProvider {
@@ -64,7 +65,7 @@ interface SelectedFeatureInfo {
   area?: string;
 }
 
-const LAYER_ORDER = ['pais', 'regioes', 'uf', 'intermediarias', 'imediatas', 'microrregioes', 'municipios'];
+const LAYER_ORDER = ['pais', 'regioes', 'uf', 'intermediarias', 'imediatas', 'microrregioes', 'municipios', 'escolas'];
 
 const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
   pais: {
@@ -312,6 +313,36 @@ const GEOJSON_METADATA_MAP: Record<string, GeoJsonMeta> = {
       },
     ],
   },
+  escolas: {
+    key: 'escolas',
+    name: 'Escolas da Educação Básica (Censo 2024 / CNEFE)',
+    icon: '🏫',
+    fileName: 'escolas_dados.csv',
+    description: 'Pontos georreferenciados de escolas do Censo Escolar 2024 cruzadas com o CNEFE 2022',
+    featuresExpected: 20120,
+    sizeEstimate: '3.5 MB',
+    recommendedZoom: 'Z ≥ 7',
+    detailedExplanation:
+      'Camada espacial pontual contendo as escolas da Educação Básica com georreferenciamento de precisão métrica obtido via cruzamento com o IBGE CNEFE 2022.',
+    ibgeConcepts: [
+      'Identificação unívoca pelo Código INEP da entidade escolar.',
+      'Simbologia colorida por Dependência Administrativa: Federal (azul), Estadual (verde), Municipal (laranja), Privada (roxo).',
+      'Classificação por Localização (Urbana e Rural) e Nível de precisão do CNEFE.',
+      'Pop-up interativo com comparação entre endereço declarado no Censo e endereço encontrado no CNEFE.',
+    ],
+    officialLinks: [
+      {
+        label: 'Microdados do Censo da Educação Básica 2024 - INEP',
+        url: 'https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar',
+        description: 'Portal oficial de dados abertos do Censo da Educação Básica.',
+      },
+      {
+        label: 'CNEFE 2022 - IBGE',
+        url: 'https://www.ibge.gov.br/estatisticas/sociais/populacao/38734-cadastro-nacional-de-enderecos-para-fins-estatisticos.html',
+        description: 'Cadastro Nacional de Endereços para Fins Estatísticos do Censo 2022.',
+      },
+    ],
+  },
 };
 
 const BASEMAP_PROVIDERS_MAP: Record<string, BasemapProvider> = {
@@ -465,6 +496,7 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mapContainer', { static: false }) mapContainerRef!: ElementRef<HTMLDivElement>;
 
   private malhasService = inject(IbgeMalhasApiService);
+  private cnefeApi = inject(IbgeCnefeApiService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
@@ -500,6 +532,7 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
     imediatas: false,
     microrregioes: false,
     municipios: false,
+    escolas: false,
   });
 
   zoomPresets = [
@@ -736,6 +769,32 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
         geojsonData = this.geoJsonCache[layerKey].data;
         payloadSizeBytes = this.geoJsonCache[layerKey].size;
         fromCache = true;
+      } else if (layerKey === 'escolas') {
+        const queryRes = await this.cnefeApi.querySchoolsComparison({ page: 1, pageSize: 500, status: 'georreferenciada' });
+        const validRecords = queryRes.records.filter((r) => r.latitude && r.longitude);
+        const features = validRecords.map((r) => ({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(r.longitude!), parseFloat(r.latitude!)],
+          },
+          properties: {
+            ...r,
+            nome: r.noEntidade,
+            codigo: r.coEntidade,
+            uf: r.sgUf,
+            municipio: r.noMunicipio,
+          },
+        }));
+        geojsonData = {
+          type: 'FeatureCollection',
+          features,
+        };
+        payloadSizeBytes = JSON.stringify(geojsonData).length;
+        this.geoJsonCache[layerKey] = {
+          data: geojsonData,
+          size: payloadSizeBytes,
+        };
       } else {
         const res = await this.malhasService.getGeoJsonData(layerKey, 'minima');
         geojsonData = res.data;
@@ -747,9 +806,22 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const downloadDurationMs = performance.now() - startTime;
+      const isPointLayer = layerKey === 'escolas';
 
       const leafletLayer = L.geoJSON(geojsonData, {
-        style: (feature) => this.getFeatureStyle(feature, layerKey),
+        style: isPointLayer ? undefined : (feature) => this.getFeatureStyle(feature, layerKey),
+        pointToLayer: (feature, latlng) => {
+          const dep = feature.properties?.tpDependencia;
+          const color = dep === '1' ? '#1565c0' : dep === '2' ? '#2e7d32' : dep === '3' ? '#e65100' : '#6a1b9a';
+          return L.circleMarker(latlng, {
+            radius: 6,
+            fillColor: color,
+            color: '#ffffff',
+            weight: 1.5,
+            opacity: 1,
+            fillOpacity: 0.85,
+          });
+        },
         onEachFeature: (feature, layer) => this.bindFeatureEvents(feature, layer, layerKey),
       });
 
@@ -892,6 +964,62 @@ export class PadraoMapasView implements OnInit, AfterViewInit, OnDestroy {
 
   private bindFeatureEvents(feature: any, layer: L.Layer, layerKey: string): void {
     const props = feature.properties || {};
+
+    if (layerKey === 'escolas') {
+      const depLabel =
+        props.tpDependencia === '1'
+          ? 'Federal'
+          : props.tpDependencia === '2'
+          ? 'Estadual'
+          : props.tpDependencia === '3'
+          ? 'Municipal'
+          : 'Privada';
+      const locLabel = props.tpLocalizacao === '1' ? 'Urbana' : 'Rural';
+
+      layer.bindTooltip(`🏫 ${props.nome || props.noEntidade} (${depLabel})`, {
+        permanent: false,
+        direction: 'top',
+        className: 'leaflet-tooltip-custom',
+      });
+
+      layer.bindPopup(`
+        <div style="font-family: Roboto, sans-serif; min-width: 240px; font-size: 13px; line-height: 1.4;">
+          <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #1a237e;">
+            🏫 ${props.noEntidade || props.nome}
+          </div>
+          <div style="margin-bottom: 6px;">
+            <span style="background: #e8eaf6; color: #1a237e; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">INEP: ${props.coEntidade || props.codigo}</span>
+            <span style="background: #e0f2f1; color: #00695c; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 4px;">${depLabel}</span>
+            <span style="background: #fff3e0; color: #e65100; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 4px;">${locLabel}</span>
+          </div>
+          <div style="color: #424242; font-size: 12px; margin-bottom: 4px;">
+            📍 <strong>${props.noMunicipio || props.municipio} - ${props.sgUf || props.uf}</strong>
+          </div>
+          <div style="color: #616161; font-size: 11px; margin-bottom: 4px;">
+            ${props.dsEndereco || ''}, ${props.nuEndereco || 'S/N'} (${props.noBairro || 'Sem Bairro'}) - CEP ${props.coCep || ''}
+          </div>
+          <div style="border-top: 1px solid #e0e0e0; padding-top: 4px; font-size: 11px; color: #2e7d32;">
+            🎯 <strong>CNEFE:</strong> ${props.cnefeDscEstabelecimento || props.noEntidade || ''}<br>
+            📌 <strong>Coord:</strong> ${props.latitude}, ${props.longitude} (Confiança: ${props.statusGeolocalizacao || 'alta'})
+          </div>
+        </div>
+      `);
+
+      layer.on({
+        mouseover: (e: L.LeafletMouseEvent) => {
+          (layer as any).setRadius?.(9);
+          this.updateDetails(props);
+        },
+        mouseout: (e: L.LeafletMouseEvent) => {
+          (layer as any).setRadius?.(6);
+        },
+        click: (e: L.LeafletMouseEvent) => {
+          this.updateDetails(props);
+        },
+      });
+      return;
+    }
+
     const label = props.nome || props.nm_mun || props.nm_uf || props.codarea || 'Brasil';
 
     layer.bindTooltip(label, {
