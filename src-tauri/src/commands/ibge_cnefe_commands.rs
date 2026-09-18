@@ -100,3 +100,17 @@ pub async fn query_cnefe_inep_schools(
 
     Ok(IbgeCnefeService::query_schools_comparison(&app_data_dir, query))
 }
+
+#[tauri::command]
+pub async fn run_cnefe_inep_match(
+    app: tauri::AppHandle,
+    req: crate::models::CnefeInepMatchRequest,
+) -> Result<CnefeSchoolSummary, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Falha ao resolver app_data_dir: {}", e))?;
+
+    IbgeCnefeService::run_matching(&app, &app_data_dir, req).await
+}
+

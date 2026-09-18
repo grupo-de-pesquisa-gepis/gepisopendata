@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { isTauri } from './environment';
 import {
+  CnefeInepMatchProgress,
+  CnefeInepMatchRequest,
   CnefeSchoolComparisonResult,
   CnefeSchoolQuery,
   CnefeSchoolSummary,
@@ -16,7 +18,9 @@ import {
 })
 export class IbgeCnefeApiService {
   downloadProgress = signal<IbgeCnefeDownloadProgress | null>(null);
+  matchProgress = signal<CnefeInepMatchProgress | null>(null);
   private unlistenProgress?: UnlistenFn;
+  private unlistenMatchProgress?: UnlistenFn;
 
   constructor() {
     this.initProgressListener();
@@ -33,6 +37,17 @@ export class IbgeCnefeApiService {
         );
       } catch (err) {
         console.warn('Não foi possível registrar listener de progresso CNEFE:', err);
+      }
+
+      try {
+        this.unlistenMatchProgress = await listen<CnefeInepMatchProgress>(
+          'cnefe-inep-match-progress',
+          (event) => {
+            this.matchProgress.set(event.payload);
+          }
+        );
+      } catch (err) {
+        console.warn('Não foi possível registrar listener de progresso de cruzamento:', err);
       }
     }
   }
@@ -98,6 +113,9 @@ export class IbgeCnefeApiService {
   async getComparisonSummary(): Promise<CnefeSchoolSummary> {
     if (!isTauri()) {
       return {
+        anoCenso: '2024',
+        cnefeAno: '2022',
+        datasetOrigemCenso: 'Microdados da Educação Básica 2024 (INEP)',
         totalEscolas: 22535,
         totalGeorreferenciadas: 20120,
         percGeorreferenciadas: 89.28,
@@ -111,6 +129,9 @@ export class IbgeCnefeApiService {
         percAmbiguas: 1.93,
         semCorrespondencia: 1980,
         percSemCorrespondencia: 8.79,
+        totalCnefeEnsino: 52410,
+        cnefeNaoCenso: 32290,
+        percCnefeNaoCenso: 61.61,
         ufsProcessadas: ['SP'],
         inepCensoDisponivel: true,
         cnefeDisponivel: true,
@@ -129,7 +150,7 @@ export class IbgeCnefeApiService {
         records: [
           {
             coEntidade: '35030806',
-            noEntidade: 'HELEN KELLER',
+            noEntidade: 'ESCOLA HELEN KELLER',
             sgUf: 'SP',
             coUf: '35',
             noMunicipio: 'Adamantina',
@@ -144,8 +165,8 @@ export class IbgeCnefeApiService {
             longitude: '-51.068637',
             cnefeNvGeoCoord: '1',
             cnefeDscEstabelecimento: 'ESCOLA HELEN KELLER',
-            statusGeolocalizacao: 'baixa',
-            confiancaNome: '0.774',
+            statusGeolocalizacao: 'alta',
+            confiancaNome: '1.000',
           },
         ],
         totalRecords: 1,
@@ -156,5 +177,12 @@ export class IbgeCnefeApiService {
     return await invoke<CnefeSchoolComparisonResult>('query_cnefe_inep_schools', {
       query,
     });
+  }
+
+  async runMatching(req: CnefeInepMatchRequest = {}): Promise<CnefeSchoolSummary> {
+    if (!isTauri()) {
+      return await this.getComparisonSummary();
+    }
+    return await invoke<CnefeSchoolSummary>('run_cnefe_inep_match', { req });
   }
 }

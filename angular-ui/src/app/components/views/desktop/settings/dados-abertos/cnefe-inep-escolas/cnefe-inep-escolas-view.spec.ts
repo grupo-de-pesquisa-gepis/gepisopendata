@@ -14,6 +14,9 @@ describe('CnefeInepEscolasView', () => {
   let cnefeApiSpy: jasmine.SpyObj<IbgeCnefeApiService>;
 
   const mockSummary: CnefeSchoolSummary = {
+    anoCenso: '2024',
+    cnefeAno: '2022',
+    datasetOrigemCenso: 'Microdados da Educação Básica 2024 (INEP)',
     totalEscolas: 100,
     totalGeorreferenciadas: 85,
     percGeorreferenciadas: 85.0,
@@ -27,6 +30,9 @@ describe('CnefeInepEscolasView', () => {
     percAmbiguas: 5.0,
     semCorrespondencia: 10,
     percSemCorrespondencia: 10.0,
+    totalCnefeEnsino: 200,
+    cnefeNaoCenso: 115,
+    percCnefeNaoCenso: 57.5,
     ufsProcessadas: ['SP'],
     inepCensoDisponivel: true,
     cnefeDisponivel: true,
@@ -65,11 +71,14 @@ describe('CnefeInepEscolasView', () => {
     cnefeApiSpy = jasmine.createSpyObj('IbgeCnefeApiService', [
       'getComparisonSummary',
       'querySchoolsComparison',
+      'runMatching',
       'openFolder',
     ]);
     (cnefeApiSpy as any).downloadProgress = signal(null);
+    (cnefeApiSpy as any).matchProgress = signal(null);
     cnefeApiSpy.getComparisonSummary.and.returnValue(Promise.resolve(mockSummary));
     cnefeApiSpy.querySchoolsComparison.and.returnValue(Promise.resolve(mockQueryResult));
+    cnefeApiSpy.runMatching.and.returnValue(Promise.resolve(mockSummary));
     cnefeApiSpy.openFolder.and.returnValue(Promise.resolve());
 
     await TestBed.configureTestingModule({
@@ -99,6 +108,12 @@ describe('CnefeInepEscolasView', () => {
     expect(component.summary()).toEqual(mockSummary);
     expect(component.records().length).toBe(1);
     expect(component.totalRecords()).toBe(1);
+  });
+
+  it('should trigger runReprocess', async () => {
+    await fixture.whenStable();
+    await component.runReprocess();
+    expect(cnefeApiSpy.runMatching).toHaveBeenCalled();
   });
 
   it('should return correct status classes and labels', () => {

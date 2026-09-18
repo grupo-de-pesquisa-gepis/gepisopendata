@@ -76,6 +76,9 @@ pub struct CnefeSchoolRecord {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CnefeSchoolSummary {
+    pub ano_censo: String,
+    pub cnefe_ano: String,
+    pub dataset_origem_censo: String,
     pub total_escolas: usize,
     pub total_georreferenciadas: usize,
     pub perc_georreferenciadas: f64,
@@ -89,6 +92,10 @@ pub struct CnefeSchoolSummary {
     pub perc_ambiguas: f64,
     pub sem_correspondencia: usize,
     pub perc_sem_correspondencia: f64,
+    // Vice-versa: Estabelecimentos de ensino no CNEFE
+    pub total_cnefe_ensino: usize,
+    pub cnefe_nao_censo: usize,
+    pub perc_cnefe_nao_censo: f64,
     pub ufs_processadas: Vec<String>,
     pub inep_censo_disponivel: bool,
     pub inep_censo_arquivo: Option<String>,
@@ -115,6 +122,12 @@ pub struct CnefeSchoolQuery {
     pub municipio: Option<String>,
     pub page: Option<usize>,
     pub page_size: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CnefeInepMatchRequest {
+    pub ufs: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -62,6 +62,9 @@ export interface CnefeSchoolRecord {
 }
 
 export interface CnefeSchoolSummary {
+  anoCenso: string;
+  cnefeAno: string;
+  datasetOrigemCenso: string;
   totalEscolas: number;
   totalGeorreferenciadas: number;
   percGeorreferenciadas: number;
@@ -75,6 +78,9 @@ export interface CnefeSchoolSummary {
   percAmbiguas: number;
   semCorrespondencia: number;
   percSemCorrespondencia: number;
+  totalCnefeEnsino: number;
+  cnefeNaoCenso: number;
+  percCnefeNaoCenso: number;
   ufsProcessadas: string[];
   inepCensoDisponivel: boolean;
   inepCensoArquivo?: string;
@@ -99,6 +105,10 @@ export interface CnefeSchoolQuery {
   pageSize?: number;
 }
 
+export interface CnefeInepMatchRequest {
+  ufs?: string[];
+}
+
 export interface CnefeInepMatchProgress {
   stage: string;
   uf?: string;
@@ -107,3 +117,4 @@ export interface CnefeInepMatchProgress {
   percentage?: number;
   message: string;
 }
+

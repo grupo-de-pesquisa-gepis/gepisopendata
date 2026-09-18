@@ -59,6 +59,9 @@ export class CnefeInepEscolasView implements OnInit {
   totalRecords = signal(0);
   isLoading = signal(true);
   isQuerying = signal(false);
+  isMatching = signal(false);
+
+  matchProgress = this.cnefeApi.matchProgress;
 
   // Filters & Pagination
   searchQuery = signal('');
@@ -132,6 +135,27 @@ export class CnefeInepEscolasView implements OnInit {
       });
     } finally {
       this.isQuerying.set(false);
+    }
+  }
+
+  async runReprocess(): Promise<void> {
+    this.isMatching.set(true);
+    try {
+      const ufs = this.selectedUf() === 'all' ? undefined : [this.selectedUf()];
+      const updatedSummary = await this.cnefeApi.runMatching({ ufs });
+      this.summary.set(updatedSummary);
+      this.snackBar.open('Cruzamento INEP x CNEFE reprocessado com sucesso!', 'OK', {
+        duration: 4000,
+      });
+      this.currentPage.set(1);
+      await this.fetchRecords();
+    } catch (err: any) {
+      console.error('Erro ao reprocessar cruzamento:', err);
+      this.snackBar.open('Erro ao reprocessar: ' + (err?.message || err), 'Fechar', {
+        duration: 5000,
+      });
+    } finally {
+      this.isMatching.set(false);
     }
   }
 

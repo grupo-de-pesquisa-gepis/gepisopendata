@@ -7,25 +7,74 @@
     <div class="header-titles">
       <h1 appAutoTooltip>IBGE CNEFE x Escolas do Censo Escolar (INEP)</h1>
       <span class="subtitle" appAutoTooltip>
-        Diagnóstico comparativo de georreferenciamento: quais escolas foram localizadas pelo CNEFE 2022 e quais não possuem correspondência
+        Diagnóstico comparativo e georreferenciamento de precisão das escolas da Educação Básica
       </span>
     </div>
     <span class="spacer"></span>
     <button mat-stroked-button (click)="goToCnefeDownload()" title="Gerenciar microdados e downloads do CNEFE">
       <mat-icon>cloud_download</mat-icon> Fonte CNEFE
     </button>
-    <button mat-stroked-button (click)="openFolder()" title="Abrir diretório de dados">
+    <button mat-stroked-button (click)="openFolder()" title="Abrir pasta onde estão os dados">
       <mat-icon>folder_open</mat-icon> Abrir Pasta
     </button>
-    <button mat-stroked-button color="primary" (click)="loadData()" [disabled]="isLoading()" title="Atualizar dados">
-      <mat-icon>refresh</mat-icon> Atualizar
+    <button mat-flat-button color="primary" (click)="runReprocess()" [disabled]="isLoading() || isMatching()" title="Executar ou reprocessar cruzamento">
+      <mat-icon>{{ isMatching() ? 'hourglass_top' : 'sync' }}</mat-icon>
+      <span>{{ isMatching() ? 'Processando...' : 'Reprocessar Cruzamento' }}</span>
     </button>
   </div>
 
-  <!-- Comparison KPI Stats -->
+  <!-- Realtime Reprocess Progress Bar -->
+  @if (matchProgress(); as prog) {
+    @if (isMatching() && prog.stage !== 'completed') {
+      <mat-card appearance="outlined" class="progress-card">
+        <mat-card-content>
+          <div class="progress-header">
+            <span class="progress-title">
+              <mat-icon inline color="primary">sync</mat-icon>
+              <strong>{{ prog.message }}</strong>
+            </span>
+            <span class="progress-stage-chip">{{ prog.stage }}</span>
+          </div>
+          <mat-progress-bar
+            [mode]="prog.percentage !== undefined ? 'determinate' : 'indeterminate'"
+            [value]="prog.percentage ?? 0">
+          </mat-progress-bar>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  <!-- Dataset Context Banner -->
   @if (summary(); as sum) {
+    <div class="dataset-context-banner">
+      <div class="context-item">
+        <mat-icon class="context-icon">source</mat-icon>
+        <div class="context-text">
+          <span class="context-title">Dataset do Censo Processado</span>
+          <span class="context-value">
+            <strong>Microdados do Censo da Educação Básica {{ sum.anoCenso }} (INEP)</strong>
+            <code>microdados_ed_basica_{{ sum.anoCenso }}.csv</code>
+          </span>
+        </div>
+      </div>
+
+      <div class="context-divider"></div>
+
+      <div class="context-item">
+        <mat-icon class="context-icon">pin_drop</mat-icon>
+        <div class="context-text">
+          <span class="context-title">Base de Georreferenciamento</span>
+          <span class="context-value">
+            <strong>CNEFE - Censo Demográfico {{ sum.cnefeAno }} (IBGE)</strong>
+            <span>GPS Real de Campo in situ • Espécie <code>COD_ESPECIE = 4</code> (Ensino)</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison KPI Stats -->
     <div class="stats-grid">
-      <!-- Total Escolas -->
+      <!-- Total Escolas Censo -->
       <mat-card appearance="outlined" class="stat-card">
         <mat-card-content>
           <div class="stat-icon-wrapper blue">
@@ -33,7 +82,7 @@
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ sum.totalEscolas | number }}</span>
-            <span class="stat-label">Escolas no Censo</span>
+            <span class="stat-label">Total Escolas no Censo {{ sum.anoCenso }}</span>
           </div>
         </mat-card-content>
       </mat-card>
@@ -90,7 +139,7 @@
         </mat-card-content>
       </mat-card>
 
-      <!-- Não Georreferenciadas (Sem Correspondência + Ambíguo) -->
+      <!-- Sem Correspondência / Ambíguo -->
       <mat-card appearance="outlined" class="stat-card alert-card">
         <mat-card-content>
           <div class="stat-icon-wrapper red">
@@ -98,46 +147,93 @@
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ (sum.semCorrespondencia + sum.ambiguas) | number }} ({{ (sum.percSemCorrespondencia + sum.percAmbiguas) | number:'1.1-1' }}%)</span>
-            <span class="stat-label">Sem Coordenada CNEFE</span>
+            <span class="stat-label">Censo ausente no CNEFE</span>
           </div>
         </mat-card-content>
       </mat-card>
     </div>
   }
 
-  <!-- Methodological Diagnostic Accordion -->
-  <mat-expansion-panel class="info-panel mat-elevation-z0" [expanded]="false">
+  <!-- Methodological Breakdown & Vice-Versa Accordion -->
+  <mat-expansion-panel class="info-panel mat-elevation-z0" [expanded]="true">
     <mat-expansion-panel-header>
       <mat-panel-title>
-        <mat-icon class="info-icon">psychology</mat-icon>
-        <strong>Como funciona o cruzamento e por que algumas escolas não são georreferenciadas?</strong>
+        <mat-icon class="info-icon">account_tree</mat-icon>
+        <strong>Camadas de Correspondência Metodológica & Relação Bidirecional (Censo x CNEFE)</strong>
       </mat-panel-title>
       <mat-panel-description>
-        Camadas de confiança, desempates e fatores que impedem a correspondência
+        Entenda o quantitativo exato de cada camada e os casos de correspondência inversa
       </mat-panel-description>
     </mat-expansion-panel-header>
 
     <div class="info-content">
-      <div class="info-grid">
-        <div class="info-card">
-          <h4><mat-icon inline>verified_user</mat-icon> Camadas de Correspondência</h4>
-          <ul>
-            <li><strong>Alta Confiança:</strong> <code>CO_MUNICIPIO + CO_CEP + NU_ENDERECO</code> batem exatamente com o CNEFE.</li>
-            <li><strong>Média Confiança:</strong> <code>CO_MUNICIPIO + CO_CEP</code> batem e desempata pelo nome da escola.</li>
-            <li><strong>Baixa Confiança:</strong> Busca por similaridade do nome da escola entre os estabelecimentos de ensino do município.</li>
-          </ul>
+      <div class="layers-grid">
+        <!-- Camada Alta -->
+        <div class="layer-card high-layer">
+          <div class="layer-header">
+            <mat-icon>verified</mat-icon>
+            <strong>Alta Confiança</strong>
+            <span class="layer-count">{{ summary()?.altaConfianca | number }} ({{ summary()?.percAlta | number:'1.1-1' }}%)</span>
+          </div>
+          <p class="layer-rule">
+            <code>CO_MUNICIPIO + CO_CEP + NU_ENDERECO</code> (INEP) batem <strong>exatamente</strong> com <code>COD_MUNICIPIO + CEP + NUM_ENDERECO</code> (CNEFE).
+          </p>
+          <span class="layer-desc">Candidato único é aceito direto. Em múltiplos candidatos no mesmo endereço, usa similaridade de nome para identificar o imóvel exato.</span>
         </div>
 
-        <div class="info-card">
-          <h4><mat-icon inline>warning_amber</mat-icon> Motivos para Ausência de Correspondência</h4>
-          <ul>
-            <li><strong>Número Ausente (S/N):</strong> Endereços rurais ou sem numeração predial dificultam o casamento exato.</li>
-            <li><strong>CEP Genérico (000):</strong> Municípios com CEP único onde múltiplas escolas compartilham o mesmo código.</li>
-            <li><strong>Ambiguidade:</strong> Dois estabelecimentos de ensino no CNEFE com nomes/notas extremamente parecidas.</li>
-            <li><strong>Prédios Novos ou Desativados:</strong> Diferenças cronológicas entre o Censo Demográfico 2022 e o Censo Escolar 2024.</li>
-          </ul>
+        <!-- Camada Média -->
+        <div class="layer-card medium-layer">
+          <div class="layer-header">
+            <mat-icon>check_circle</mat-icon>
+            <strong>Média Confiança</strong>
+            <span class="layer-count">{{ summary()?.mediaConfianca | number }} ({{ summary()?.percMedia | number:'1.1-1' }}%)</span>
+          </div>
+          <p class="layer-rule">
+            <code>CO_MUNICIPIO + CO_CEP</code> batem e desempata pelo <strong>nome da escola</strong>.
+          </p>
+          <span class="layer-desc">Utilizado quando o número do endereço é ausente (S/N) ou divergente. Tolerante a pequenos erros de numeração predial.</span>
+        </div>
+
+        <!-- Camada Baixa -->
+        <div class="layer-card low-layer">
+          <div class="layer-header">
+            <mat-icon>published_with_changes</mat-icon>
+            <strong>Baixa Confiança</strong>
+            <span class="layer-count">{{ summary()?.baixaConfianca | number }} ({{ summary()?.percBaixa | number:'1.1-1' }}%)</span>
+          </div>
+          <p class="layer-rule">
+            Busca por <strong>similaridade do nome da escola</strong> entre os estabelecimentos de ensino do município.
+          </p>
+          <span class="layer-desc">Aplicado quando o CEP não coincide ou quando o município possui CEP-base genérico (terminado em 000). Limiar mínimo de similaridade: 0.50.</span>
+        </div>
+
+        <!-- Ambíguas & Não Georreferenciadas -->
+        <div class="layer-card no-match-layer">
+          <div class="layer-header">
+            <mat-icon>location_off</mat-icon>
+            <strong>Censo Ausente no CNEFE</strong>
+            <span class="layer-count">{{ ((summary()?.semCorrespondencia || 0) + (summary()?.ambiguas || 0)) | number }} ({{ ((summary()?.percSemCorrespondencia || 0) + (summary()?.percAmbiguas || 0)) | number:'1.1-1' }}%)</span>
+          </div>
+          <p class="layer-rule">
+            Escolas do Censo Escolar que <strong>não possuem correspondência</strong> segura no CNEFE ({{ summary()?.semCorrespondencia | number }}) ou ficaram <strong>ambíguas</strong> ({{ summary()?.ambiguas | number }}).
+          </p>
+          <span class="layer-desc">Motivos: nomes muito divergentes, áreas rurais sem arruamento catalogado ou prédios escolares inaugurados pós-Censo Demográfico 2022.</span>
         </div>
       </div>
+
+      <!-- Vice-Versa Box -->
+      @if (summary(); as sum) {
+        <div class="vice-versa-box">
+          <div class="vice-versa-header">
+            <mat-icon>swap_horiz</mat-icon>
+            <strong>Relação Vice-Versa: Estabelecimentos de Ensino no CNEFE não presentes no Censo Escolar</strong>
+          </div>
+          <p>
+            O CNEFE identificou um total de <strong>{{ sum.totalCnefeEnsino | number }}</strong> estabelecimentos de ensino (<code>COD_ESPECIE = 4</code>) nas UFs processadas.
+            Desses, aproximadamente <strong>{{ sum.cnefeNaoCenso | number }} ({{ sum.percCnefeNaoCenso | number:'1.1-1' }}%)</strong> são estabelecimentos que <em>não pertencem ao Censo da Educação Básica regular</em> (como universidades/ensino superior, cursos de idiomas, autoescolas, polos EAD, creches informais ou escolas desativadas antes de 2024).
+          </p>
+        </div>
+      }
     </div>
   </mat-expansion-panel>
 
@@ -186,7 +282,7 @@
   @if (isLoading()) {
     <div class="loading-state">
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      <p>Carregando cruzamento CNEFE x Censo Escolar...</p>
+      <p>Carregando registros e diagnóstico comparativo...</p>
     </div>
   } @else {
     <div class="table-card mat-elevation-z1">
@@ -206,7 +302,7 @@
 
           <!-- School Name Column -->
           <ng-container matColumnDef="noEntidade">
-            <th mat-header-cell *matHeaderCellDef>Nome da Escola</th>
+            <th mat-header-cell *matHeaderCellDef>Nome da Escola (Censo 2024)</th>
             <td mat-cell *matCellDef="let row">
               <span class="school-name" appAutoTooltip>{{ row.noEntidade }}</span>
               <div class="school-meta">
@@ -237,7 +333,7 @@
 
           <!-- Status Column -->
           <ng-container matColumnDef="statusGeolocalizacao">
-            <th mat-header-cell *matHeaderCellDef>Status CNEFE</th>
+            <th mat-header-cell *matHeaderCellDef>Status / Camada</th>
             <td mat-cell *matCellDef="let row">
               <span class="status-badge" [ngClass]="getStatusClass(row.statusGeolocalizacao)">
                 <mat-icon inline>{{ getStatusIcon(row.statusGeolocalizacao) }}</mat-icon>
@@ -248,7 +344,7 @@
 
           <!-- Coordinates Column -->
           <ng-container matColumnDef="coordenadas">
-            <th mat-header-cell *matHeaderCellDef>Latitude / Longitude</th>
+            <th mat-header-cell *matHeaderCellDef>Coordenadas (GPS)</th>
             <td mat-cell *matCellDef="let row" class="coords-cell">
               @if (row.latitude && row.longitude) {
                 <span class="coords-text">
@@ -257,7 +353,7 @@
                 </span>
               } @else {
                 <span class="no-coords">
-                  <mat-icon inline>location_disabled</mat-icon> Não disponível
+                  <mat-icon inline>location_disabled</mat-icon> Não localizada
                 </span>
               }
             </td>
@@ -265,18 +361,18 @@
 
           <!-- CNEFE Matched Name Column -->
           <ng-container matColumnDef="cnefeMatch">
-            <th mat-header-cell *matHeaderCellDef>Correspondência no CNEFE</th>
+            <th mat-header-cell *matHeaderCellDef>Correspondência no CNEFE 2022</th>
             <td mat-cell *matCellDef="let row">
               @if (row.cnefeDscEstabelecimento) {
                 <span class="cnefe-name" appAutoTooltip>{{ row.cnefeDscEstabelecimento }}</span>
                 @if (row.confiancaNome) {
-                  <span class="score-pill" matTooltip="Grau de similaridade textual">
+                  <span class="score-pill" matTooltip="Similaridade textual da escola">
                     Score: {{ row.confiancaNome }}
                   </span>
                 }
               } @else {
                 <span class="no-match-reason">
-                  {{ row.statusGeolocalizacao === 'ambiguo' ? 'Conflito entre múltiplos estabelecimentos' : 'Endereço/Escola não localizado no CNEFE' }}
+                  {{ row.statusGeolocalizacao === 'ambiguo' ? 'Conflito de desempate entre múltiplos estabelecimentos' : 'Endereço/Escola não localizada na base CNEFE' }}
                 </span>
               }
             </td>

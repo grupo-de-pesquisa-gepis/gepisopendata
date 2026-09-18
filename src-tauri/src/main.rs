@@ -80,8 +80,10 @@ fn main() {
             delete_ibge_cnefe_uf,
             open_ibge_cnefe_folder,
             get_cnefe_inep_summary,
-            query_cnefe_inep_schools
+            query_cnefe_inep_schools,
+            run_cnefe_inep_match
         ])
+
 
 
         .setup(|app| {
