@@ -1,4 +1,7 @@
-use crate::models::{IbgeCnefeDownloadRequest, IbgeCnefeOverview};
+use crate::models::{
+    CnefeSchoolComparisonResult, CnefeSchoolQuery, CnefeSchoolSummary, IbgeCnefeDownloadRequest,
+    IbgeCnefeOverview,
+};
 use crate::services::IbgeCnefeService;
 use std::fs;
 use tauri::Manager;
@@ -73,4 +76,27 @@ pub async fn open_ibge_cnefe_folder(app: tauri::AppHandle) -> Result<(), String>
         .map_err(|e| format!("Falha ao abrir pasta no sistema operacional: {}", e))?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_cnefe_inep_summary(app: tauri::AppHandle) -> Result<CnefeSchoolSummary, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Falha ao resolver app_data_dir: {}", e))?;
+
+    Ok(IbgeCnefeService::get_comparison_summary(&app_data_dir))
+}
+
+#[tauri::command]
+pub async fn query_cnefe_inep_schools(
+    app: tauri::AppHandle,
+    query: CnefeSchoolQuery,
+) -> Result<CnefeSchoolComparisonResult, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Falha ao resolver app_data_dir: {}", e))?;
+
+    Ok(IbgeCnefeService::query_schools_comparison(&app_data_dir, query))
 }

@@ -119,7 +119,22 @@ export const routes: Routes = [
             (m) => m.CnefeLatLgtView
           ),
       },
+      {
+        path: 'settings/dados-abertos/cnefe-fonte',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/cnefe-lat-lgt/cnefe-lat-lgt-view').then(
+            (m) => m.CnefeLatLgtView
+          ),
+      },
+      {
+        path: 'settings/dados-abertos/cnefe-inep-escolas',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/cnefe-inep-escolas/cnefe-inep-escolas-view').then(
+            (m) => m.CnefeInepEscolasView
+          ),
+      },
     ],
   },
 ];
+
 

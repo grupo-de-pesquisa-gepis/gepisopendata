@@ -78,8 +78,11 @@ fn main() {
             download_ibge_cnefe_uf,
             extract_ibge_cnefe_uf,
             delete_ibge_cnefe_uf,
-            open_ibge_cnefe_folder
+            open_ibge_cnefe_folder,
+            get_cnefe_inep_summary,
+            query_cnefe_inep_schools
         ])
+
 
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();

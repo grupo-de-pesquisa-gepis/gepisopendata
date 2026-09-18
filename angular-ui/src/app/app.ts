@@ -120,12 +120,18 @@ export class App implements OnInit, OnDestroy {
       case 'padrao_mapas':
         route = '/desktop/settings/dados-abertos/padrao-mapas';
         break;
+      case 'cnefe_fonte':
       case 'lat_lgt':
       case 'lat_lgt_ibge':
       case 'cnefe_lat_lgt':
-        route = '/desktop/settings/dados-abertos/lat-lgt';
+        route = '/desktop/settings/dados-abertos/cnefe-fonte';
+        break;
+      case 'cnefe_x_escolas_censo':
+      case 'cnefe_inep_escolas':
+        route = '/desktop/settings/dados-abertos/cnefe-inep-escolas';
         break;
       default:
+
 
         console.warn(`Unrecognized menu ID: ${menuId}`);
         return;

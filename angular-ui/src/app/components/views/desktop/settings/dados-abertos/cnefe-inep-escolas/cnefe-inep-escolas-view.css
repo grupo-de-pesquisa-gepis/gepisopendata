@@ -1,0 +1,384 @@
+.container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.header-titles h1 {
+  margin: 0;
+  color: #3f51b5;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  color: #616161;
+  font-size: 0.88rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.stat-card mat-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.stat-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon-wrapper mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.stat-icon-wrapper.blue {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.stat-icon-wrapper.green {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.stat-icon-wrapper.dark-green {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.stat-icon-wrapper.teal {
+  background: #e0f2f1;
+  color: #00796b;
+}
+
+.stat-icon-wrapper.orange {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.stat-icon-wrapper.red {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #212121;
+}
+
+.stat-label {
+  font-size: 0.78rem;
+  color: #757575;
+}
+
+.alert-card {
+  border-color: #ffcdd2;
+}
+
+/* Info Panel */
+.info-panel {
+  margin-bottom: 20px;
+  background: #fdfdfe;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px !important;
+}
+
+.info-icon {
+  color: #3f51b5;
+  margin-right: 8px;
+}
+
+.info-content {
+  padding-top: 10px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.info-card {
+  background: #f5f5f5;
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.info-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.92rem;
+  color: #1a237e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+  color: #424242;
+  line-height: 1.5;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.status-chips-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.uf-select {
+  width: 140px;
+}
+
+.search-field {
+  flex: 1;
+  min-width: 280px;
+}
+
+/* Table Card */
+.table-card {
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  position: relative;
+}
+
+.query-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.schools-table {
+  width: 100%;
+}
+
+.schools-table th {
+  font-weight: 600;
+  color: #424242;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+  padding: 12px 16px;
+}
+
+.schools-table td {
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  vertical-align: middle;
+}
+
+.school-name {
+  font-weight: 600;
+  color: #1a237e;
+  display: block;
+}
+
+.school-meta {
+  font-size: 0.75rem;
+  color: #757575;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.uf-tag {
+  background: #e8eaf6;
+  color: #3f51b5;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.address-cell {
+  max-width: 260px;
+}
+
+.address-text {
+  display: block;
+  color: #212121;
+  font-size: 0.84rem;
+}
+
+.cep-text {
+  display: block;
+  color: #757575;
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge mat-icon {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+}
+
+.status-badge.status-alta {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.status-badge.status-media {
+  background: #e0f2f1;
+  color: #00695c;
+}
+
+.status-badge.status-baixa {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-badge.status-ambiguo {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.status-badge.status-sem-corresp {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Coords Cell */
+.coords-cell {
+  white-space: nowrap;
+}
+
+.coords-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #1976d2;
+  font-size: 0.82rem;
+}
+
+.coords-text mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.no-coords {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #9e9e9e;
+  font-size: 0.8rem;
+}
+
+.no-coords mat-icon {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+}
+
+/* CNEFE Match */
+.cnefe-name {
+  font-weight: 500;
+  color: #333;
+  display: block;
+}
+
+.score-pill {
+  background: #f5f5f5;
+  color: #616161;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.no-match-reason {
+  color: #b71c1c;
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 60px 24px;
+}
+
+.loading-state p {
+  margin-top: 16px;
+  color: #757575;
+}

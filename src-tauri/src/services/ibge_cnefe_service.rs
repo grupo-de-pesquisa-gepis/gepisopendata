@@ -1,11 +1,15 @@
 use crate::models::{
-    IbgeCnefeDownloadProgress, IbgeCnefeDownloadRequest, IbgeCnefeOverview, IbgeCnefeUfStatus,
+    CnefeSchoolComparisonResult, CnefeSchoolQuery, CnefeSchoolRecord,
+    CnefeSchoolSummary, IbgeCnefeDownloadProgress, IbgeCnefeDownloadRequest, IbgeCnefeOverview,
+    IbgeCnefeUfStatus,
 };
 use futures::StreamExt;
+use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use tauri::Emitter;
+
 
 pub const CNEFE_BASE_URL: &str =
     "https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/Arquivos_CNEFE/CSV/UF";
@@ -393,6 +397,347 @@ impl IbgeCnefeService {
         }
 
         Ok(deleted)
+    }
+
+    // --- CNEFE x INEP Censo Escolar Integration & Comparison ---
+
+    pub fn find_inep_censo_csv(app_data_dir: &Path) -> Option<PathBuf> {
+        let candidates = [
+            app_data_dir.join("data").join("inep_censo_escolar"),
+            app_data_dir.join("datasets"),
+            PathBuf::from("TEMP/georef-artifacts/data/inep_censo_escolar"),
+        ];
+
+        for base in &candidates {
+            if base.exists() {
+                let mut found_files = Vec::new();
+                let _ = crate::services::path_resolver::find_files_recursive(base, "csv", &mut found_files);
+                for file in found_files {
+                    let name = file.file_name().and_then(|s| s.to_str()).unwrap_or("");
+                    if name.starts_with("microdados_ed_basica_") {
+                        return Some(file);
+                    }
+                }
+            }
+        }
+
+        // Check if manifest dir has georef artifacts
+        if let Ok(manifest) = std::env::var("CARGO_MANIFEST_DIR") {
+            let p = PathBuf::from(manifest).join("TEMP/georef-artifacts/data/inep_censo_escolar/zipfiles/microdados_censo_escolar_2024/microdados_censo_escolar_2024_defeso/dados/microdados_ed_basica_2024.csv");
+            if p.exists() {
+                return Some(p);
+            }
+        }
+
+        None
+    }
+
+    pub fn find_escolas_dados_csv(app_data_dir: &Path) -> Option<PathBuf> {
+        let primary = app_data_dir.join("data").join("escolas_dados.csv");
+        if primary.exists() {
+            return Some(primary);
+        }
+
+        if let Ok(manifest) = std::env::var("CARGO_MANIFEST_DIR") {
+            let dev_path = PathBuf::from(manifest).join("TEMP/georef-artifacts/data/escolas_dados.csv");
+            if dev_path.exists() {
+                return Some(dev_path);
+            }
+        }
+
+        let temp_path = PathBuf::from("TEMP/georef-artifacts/data/escolas_dados.csv");
+        if temp_path.exists() {
+            return Some(temp_path);
+        }
+
+        None
+    }
+
+    pub fn get_comparison_summary(app_data_dir: &Path) -> CnefeSchoolSummary {
+        let inep_path = Self::find_inep_censo_csv(app_data_dir);
+        let cnefe_overview = Self::get_status(app_data_dir);
+        let cnefe_available = cnefe_overview.total_extracted_count > 0 || cnefe_overview.total_zip_count > 0;
+
+        let escolas_csv = Self::find_escolas_dados_csv(app_data_dir);
+
+        if let Some(csv_path) = escolas_csv {
+            if let Ok(file) = File::open(&csv_path) {
+                let reader = BufReader::new(file);
+                let mut total_escolas = 0usize;
+                let mut alta = 0usize;
+                let mut media = 0usize;
+                let mut baixa = 0usize;
+                let mut ambiguas = 0usize;
+                let mut sem_corresp = 0usize;
+                let mut ufs_set = HashMap::new();
+
+                let mut lines = reader.lines();
+                if let Some(Ok(header_line)) = lines.next() {
+                    let delimiter = if header_line.contains(';') { ';' } else { ',' };
+                    let header_cols: Vec<String> = header_line
+                        .split(delimiter)
+                        .map(|s| s.trim_matches('"').trim().to_string())
+                        .collect();
+
+                    let idx_status = header_cols.iter().position(|c| c == "STATUS_GEOLOCALIZACAO");
+                    let idx_uf = header_cols.iter().position(|c| c == "SG_UF" || c == "CO_UF");
+
+                    for line_res in lines {
+                        if let Ok(line) = line_res {
+                            if line.trim().is_empty() {
+                                continue;
+                            }
+                            total_escolas += 1;
+                            let cols: Vec<&str> = line.split(delimiter).collect();
+
+                            if let Some(idx) = idx_uf {
+                                if let Some(uf_val) = cols.get(idx) {
+                                    let clean_uf = uf_val.trim_matches('"').trim().to_string();
+                                    if !clean_uf.is_empty() {
+                                        *ufs_set.entry(clean_uf).or_insert(0) += 1;
+                                    }
+                                }
+                            }
+
+                            if let Some(idx) = idx_status {
+                                if let Some(st) = cols.get(idx) {
+                                    let s = st.trim_matches('"').trim().to_lowercase();
+                                    match s.as_str() {
+                                        "alta" => alta += 1,
+                                        "media" => media += 1,
+                                        "baixa" => baixa += 1,
+                                        "ambiguo" => ambiguas += 1,
+                                        _ => sem_corresp += 1,
+                                    }
+                                } else {
+                                    sem_corresp += 1;
+                                }
+                            } else {
+                                sem_corresp += 1;
+                            }
+                        }
+                    }
+
+                    let georref = alta + media + baixa;
+                    let denom = if total_escolas > 0 { total_escolas as f64 } else { 1.0 };
+
+                    let mut ufs_list: Vec<String> = ufs_set.into_keys().collect();
+                    ufs_list.sort();
+
+                    return CnefeSchoolSummary {
+                        total_escolas,
+                        total_georreferenciadas: georref,
+                        perc_georreferenciadas: (georref as f64 / denom) * 100.0,
+                        alta_confianca: alta,
+                        perc_alta: (alta as f64 / denom) * 100.0,
+                        media_confianca: media,
+                        perc_media: (media as f64 / denom) * 100.0,
+                        baixa_confianca: baixa,
+                        perc_baixa: (baixa as f64 / denom) * 100.0,
+                        ambiguas,
+                        perc_ambiguas: (ambiguas as f64 / denom) * 100.0,
+                        sem_correspondencia: sem_corresp,
+                        perc_sem_correspondencia: (sem_corresp as f64 / denom) * 100.0,
+                        ufs_processadas: ufs_list,
+                        inep_censo_disponivel: inep_path.is_some(),
+                        inep_censo_arquivo: inep_path.map(|p| p.to_string_lossy().to_string()),
+                        cnefe_disponivel: cnefe_available,
+                        output_file_path: Some(csv_path.to_string_lossy().to_string()),
+                    };
+                }
+            }
+        }
+
+        CnefeSchoolSummary {
+            total_escolas: 0,
+            total_georreferenciadas: 0,
+            perc_georreferenciadas: 0.0,
+            alta_confianca: 0,
+            perc_alta: 0.0,
+            media_confianca: 0,
+            perc_media: 0.0,
+            baixa_confianca: 0,
+            perc_baixa: 0.0,
+            ambiguas: 0,
+            perc_ambiguas: 0.0,
+            sem_correspondencia: 0,
+            perc_sem_correspondencia: 0.0,
+            ufs_processadas: Vec::new(),
+            inep_censo_disponivel: inep_path.is_some(),
+            inep_censo_arquivo: inep_path.map(|p| p.to_string_lossy().to_string()),
+            cnefe_disponivel: cnefe_available,
+            output_file_path: None,
+        }
+    }
+
+    pub fn query_schools_comparison(
+        app_data_dir: &Path,
+        query: CnefeSchoolQuery,
+    ) -> CnefeSchoolComparisonResult {
+        let summary = Self::get_comparison_summary(app_data_dir);
+        let escolas_csv = Self::find_escolas_dados_csv(app_data_dir);
+
+        let mut matched_records = Vec::new();
+
+        if let Some(csv_path) = escolas_csv {
+            if let Ok(file) = File::open(&csv_path) {
+                let reader = BufReader::new(file);
+                let mut lines = reader.lines();
+
+                if let Some(Ok(header_line)) = lines.next() {
+                    let delimiter = if header_line.contains(';') { ';' } else { ',' };
+                    let header_cols: Vec<String> = header_line
+                        .split(delimiter)
+                        .map(|s| s.trim_matches('"').trim().to_string())
+                        .collect();
+
+                    let find_idx = |name: &str| header_cols.iter().position(|c| c == name);
+
+                    let idx_co_entidade = find_idx("CO_ENTIDADE").unwrap_or(19);
+                    let idx_no_entidade = find_idx("NO_ENTIDADE").unwrap_or(18);
+                    let idx_sg_uf = find_idx("SG_UF").unwrap_or(4);
+                    let idx_co_uf = find_idx("CO_UF").unwrap_or(5);
+                    let idx_no_mun = find_idx("NO_MUNICIPIO").unwrap_or(6);
+                    let idx_co_mun = find_idx("CO_MUNICIPIO").unwrap_or(7);
+                    let idx_co_cep = find_idx("CO_CEP").unwrap_or(28);
+                    let idx_ds_end = find_idx("DS_ENDERECO").unwrap_or(24);
+                    let idx_nu_end = find_idx("NU_ENDERECO").unwrap_or(25);
+                    let idx_no_bairro = find_idx("NO_BAIRRO").unwrap_or(27);
+                    let idx_tp_dep = find_idx("TP_DEPENDENCIA").unwrap_or(20);
+                    let idx_tp_loc = find_idx("TP_LOCALIZACAO").unwrap_or(22);
+                    let idx_lat = find_idx("LATITUDE");
+                    let idx_lon = find_idx("LONGITUDE");
+                    let idx_nv_geo = find_idx("CNEFE_NV_GEO_COORD");
+                    let idx_dsc = find_idx("CNEFE_DSC_ESTABELECIMENTO");
+                    let idx_status = find_idx("STATUS_GEOLOCALIZACAO");
+                    let idx_confianca = find_idx("CONFIANCA_NOME");
+
+                    let q_uf = query.uf.as_deref().map(|s| s.trim().to_uppercase());
+                    let q_search = query.search.as_deref().map(|s| s.trim().to_lowercase());
+                    let q_status = query.status.as_deref().map(|s| s.trim().to_lowercase());
+                    let q_mun = query.municipio.as_deref().map(|s| s.trim().to_lowercase());
+
+                    for line_res in lines {
+                        if let Ok(line) = line_res {
+                            if line.trim().is_empty() {
+                                continue;
+                            }
+                            let cols: Vec<&str> = line.split(delimiter).collect();
+
+                            let get_val = |idx: usize| -> String {
+                                cols.get(idx)
+                                    .map(|s| s.trim_matches('"').trim().to_string())
+                                    .unwrap_or_default()
+                            };
+
+                            let get_opt = |opt_idx: Option<usize>| -> Option<String> {
+                                opt_idx.and_then(|idx| cols.get(idx)).and_then(|s| {
+                                    let clean = s.trim_matches('"').trim();
+                                    if clean.is_empty() { None } else { Some(clean.to_string()) }
+                                })
+                            };
+
+                            let sg_uf = get_val(idx_sg_uf);
+                            let no_mun = get_val(idx_no_mun);
+                            let no_entidade = get_val(idx_no_entidade);
+                            let co_entidade = get_val(idx_co_entidade);
+                            let status = get_opt(idx_status).unwrap_or_else(|| "sem_correspondencia".to_string());
+
+                            // Filtering by UF
+                            if let Some(ref req_uf) = q_uf {
+                                if !req_uf.is_empty() && req_uf != "ALL" && !sg_uf.eq_ignore_ascii_case(req_uf) {
+                                    continue;
+                                }
+                            }
+
+                            // Filtering by Municipio
+                            if let Some(ref req_mun) = q_mun {
+                                if !req_mun.is_empty() && !no_mun.to_lowercase().contains(req_mun) {
+                                    continue;
+                                }
+                            }
+
+                            // Filtering by Status
+                            if let Some(ref req_st) = q_status {
+                                match req_st.as_str() {
+                                    "georreferenciada" => {
+                                        if !matches!(status.as_str(), "alta" | "media" | "baixa") {
+                                            continue;
+                                        }
+                                    }
+                                    "nao_georreferenciada" => {
+                                        if matches!(status.as_str(), "alta" | "media" | "baixa") {
+                                            continue;
+                                        }
+                                    }
+                                    "alta" => { if status != "alta" { continue; } }
+                                    "media" => { if status != "media" { continue; } }
+                                    "baixa" => { if status != "baixa" { continue; } }
+                                    "ambiguo" => { if status != "ambiguo" { continue; } }
+                                    "sem_correspondencia" => { if status != "sem_correspondencia" { continue; } }
+                                    _ => {}
+                                }
+                            }
+
+                            // Filtering by Search query (Name or INEP code)
+                            if let Some(ref req_search) = q_search {
+                                if !req_search.is_empty()
+                                    && !no_entidade.to_lowercase().contains(req_search)
+                                    && !co_entidade.contains(req_search)
+                                    && !no_mun.to_lowercase().contains(req_search)
+                                {
+                                    continue;
+                                }
+                            }
+
+                            matched_records.push(CnefeSchoolRecord {
+                                co_entidade,
+                                no_entidade,
+                                sg_uf,
+                                co_uf: get_val(idx_co_uf),
+                                no_municipio: no_mun,
+                                co_municipio: get_val(idx_co_mun),
+                                co_cep: get_val(idx_co_cep),
+                                ds_endereco: get_val(idx_ds_end),
+                                nu_endereco: get_val(idx_nu_end),
+                                no_bairro: get_val(idx_no_bairro),
+                                tp_dependencia: get_val(idx_tp_dep),
+                                tp_localizacao: get_val(idx_tp_loc),
+                                latitude: get_opt(idx_lat),
+                                longitude: get_opt(idx_lon),
+                                cnefe_nv_geo_coord: get_opt(idx_nv_geo),
+                                cnefe_dsc_estabelecimento: get_opt(idx_dsc),
+                                status_geolocalizacao: status,
+                                confianca_nome: get_opt(idx_confianca),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        let total_records = matched_records.len();
+        let page = query.page.unwrap_or(1).max(1);
+        let page_size = query.page_size.unwrap_or(50).clamp(1, 500);
+
+        let start_idx = (page - 1) * page_size;
+        let paged_records = if start_idx < total_records {
+            matched_records
+                .into_iter()
+                .skip(start_idx)
+                .take(page_size)
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        CnefeSchoolComparisonResult {
+            summary,
+            records: paged_records,
+            total_records,
+            page,
+            page_size,
+        }
     }
 }
 
