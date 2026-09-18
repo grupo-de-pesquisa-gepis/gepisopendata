@@ -1,0 +1,320 @@
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <button mat-icon-button (click)="goBack()" title="Voltar ao Início">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-titles">
+      <h1 appAutoTooltip>Coordenadas Geográficas IBGE - CNEFE 2022 (lat/lgt)</h1>
+      <span class="subtitle" appAutoTooltip>
+        Cadastro Nacional de Endereços para Fins Estatísticos (CNEFE) — Georreferenciamento de precisão (GPS de campo) do Censo Demográfico 2022
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <button mat-stroked-button (click)="openFolder()" title="Abrir pasta do CNEFE no explorador do sistema">
+      <mat-icon>folder_open</mat-icon> Abrir Pasta
+    </button>
+    <button mat-stroked-button color="primary" (click)="loadStatus()" [disabled]="isLoading()" title="Atualizar status dos arquivos locais">
+      <mat-icon>refresh</mat-icon> Atualizar
+    </button>
+  </div>
+
+  <!-- Realtime Download / Extraction Progress -->
+  @if (downloadProgress(); as prog) {
+    @if (prog.stage !== 'completed') {
+      <mat-card appearance="outlined" class="progress-card">
+        <mat-card-content>
+          <div class="progress-header">
+            <span class="progress-title">
+              <mat-icon inline color="primary">downloading</mat-icon>
+              <strong>{{ prog.message }}</strong>
+            </span>
+            <span class="progress-stage-chip">{{ prog.stage }}</span>
+          </div>
+          <mat-progress-bar
+            [mode]="prog.percentage !== undefined ? 'determinate' : 'indeterminate'"
+            [value]="prog.percentage ?? 0">
+          </mat-progress-bar>
+          <div class="progress-footer">
+            <span>UF: <strong>{{ prog.uf }}</strong></span>
+            @if (prog.percentage !== undefined) {
+              <span>{{ prog.percentage | number:'1.0-1' }}%</span>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  <!-- Stats Overview Banner -->
+  <div class="stats-grid">
+    <mat-card appearance="outlined" class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-wrapper blue">
+          <mat-icon>public</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalUfs() }} UFs</span>
+          <span class="stat-label">Estados do Brasil</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-wrapper green">
+          <mat-icon>folder_zip</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ downloadedCount() }} / {{ totalUfs() }}</span>
+          <span class="stat-label">ZIPs Baixados</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-wrapper orange">
+          <mat-icon>table_view</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ extractedCount() }} / {{ totalUfs() }}</span>
+          <span class="stat-label">CSVs Extraídos</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-wrapper purple">
+          <mat-icon>storage</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalSizeFormatted() }}</span>
+          <span class="stat-label">Espaço em Disco</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="stat-card batch-card">
+      <mat-card-content>
+        <div class="batch-actions">
+          <span class="batch-title">Downloads Rápidos</span>
+          <div class="batch-buttons">
+            <button mat-raised-button color="primary" (click)="downloadRegion(selectedRegion())" [disabled]="isBatchDownloading() || isLoading()">
+              <mat-icon>download</mat-icon> {{ selectedRegion() === 'all' ? 'Baixar Todas as 27 UFs' : 'Baixar Região ' + selectedRegion() }}
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Information & Methodology Accordion -->
+  <mat-expansion-panel class="info-panel mat-elevation-z0" [expanded]="false">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon class="info-icon">info</mat-icon>
+        <strong>Entenda o CNEFE (IBGE) e o Georreferenciamento de Escolas</strong>
+      </mat-panel-title>
+      <mat-panel-description>
+        Precisão de campo, identificação de escolas e metodologia de cruzamento com INEP
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    <div class="info-content">
+      <div class="info-block">
+        <h3><mat-icon inline>my_location</mat-icon> Por que o CNEFE é a fonte mais precisa de latitude/longitude?</h3>
+        <p>
+          Diferente de catálogos baseados em geocodificação aproximada por texto de endereço, o <strong>CNEFE do Censo Demográfico 2022</strong> foi a primeira vez na história que o IBGE coletou a localização precisa para todos os endereços em campo, resultando em um cadastro <strong>100% georreferenciado</strong>.
+        </p>
+        <p>
+          As coordenadas foram capturadas automaticamente pelo aplicativo do recenseador durante a entrevista/visita in situ, com verificação de tempo e posicionamento pelos supervisores — tratando-se de <strong>coordenada real de campo</strong> (GPS), e não interpolação por logradouro.
+        </p>
+      </div>
+
+      <div class="info-block">
+        <h3><mat-icon inline>school</mat-icon> Como identificar escolas e estabelecimentos de ensino no CNEFE?</h3>
+        <p>
+          O cadastro classifica cada endereço por espécie. Os estabelecimentos de ensino são identificados com <code>COD_ESPECIE = 4</code> (Estabelecimentos de Ensino). O campo complementar <code>DSC_ESTABELECIMENTO</code> contém o nome/tipo do imóvel, permitindo discriminar escolas, colégios e universidades de outros estabelecimentos.
+        </p>
+      </div>
+
+      <div class="info-block">
+        <h3><mat-icon inline>hub</mat-icon> Cruzamento Metodológico com os Microdados do Censo Escolar (INEP)</h3>
+        <p>
+          O Censo Escolar do INEP e o CNEFE do IBGE não possuem um identificador chave único compartilhado (como o código INEP da escola). Por isso, o motor de georreferenciamento realiza o casamento em camadas hierárquicas de confiança:
+        </p>
+        <ul>
+          <li><strong>Alta confiança:</strong> Casamento exato por Município + CEP + Número do endereço.</li>
+          <li><strong>Média confiança:</strong> Casamento por Município + CEP + desempate fonético/similaridade pelo nome da escola.</li>
+          <li><strong>Baixa confiança:</strong> Busca por maior similaridade de nome entre os estabelecimentos de ensino do município.</li>
+          <li><strong>Aproximado (Fallback):</strong> Geocodificação aproximada no nível do CEP.</li>
+        </ul>
+        <p class="methodology-note">
+          <mat-icon inline>lightbulb</mat-icon> <em>Validação cruzada:</em> Comparar as coordenadas do CNEFE com o Catálogo de Escolas do INEP serve como verificação e garantia de qualidade espacial.
+        </p>
+      </div>
+    </div>
+  </mat-expansion-panel>
+
+  <!-- Toolbar: Filters, Options & Search -->
+  <div class="toolbar">
+    <div class="filters-group">
+      <mat-chip-listbox [ngModel]="selectedRegion()" (ngModelChange)="selectedRegion.set($event)">
+        @for (reg of regions; track reg) {
+          <mat-chip-option [value]="reg">
+            {{ reg === 'all' ? 'Todas as Regiões' : reg }}
+          </mat-chip-option>
+        }
+      </mat-chip-listbox>
+
+      <mat-chip-listbox [ngModel]="selectedStatusFilter()" (ngModelChange)="selectedStatusFilter.set($event)">
+        <mat-chip-option value="all">Todos os Status</mat-chip-option>
+        <mat-chip-option value="downloaded">Baixados</mat-chip-option>
+        <mat-chip-option value="extracted">Extraídos</mat-chip-option>
+        <mat-chip-option value="pending">Não Baixados</mat-chip-option>
+      </mat-chip-listbox>
+    </div>
+
+    <div class="options-and-search">
+      <mat-checkbox [ngModel]="extractZip()" (ngModelChange)="extractZip.set($event)" color="primary">
+        Extrair CSV automaticamente após o download
+      </mat-checkbox>
+
+      <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          placeholder="Buscar UF por nome, sigla ou código...">
+        @if (searchQuery()) {
+          <button matSuffix mat-icon-button (click)="searchQuery.set('')">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- UFs Cards Grid -->
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <p>Verificando arquivos locais do CNEFE IBGE...</p>
+    </div>
+  } @else {
+    <div class="ufs-grid">
+      @for (uf of filteredUfs(); track uf.code) {
+        <mat-card appearance="outlined" class="uf-card">
+          <mat-card-header>
+            <div class="uf-header-row">
+              <div class="uf-title-block">
+                <div class="uf-sigla-badge">{{ uf.sigla }}</div>
+                <div>
+                  <h2 class="uf-name" appAutoTooltip>{{ uf.name }}</h2>
+                  <span class="uf-code-pill">Código IBGE: <code>{{ uf.code }}</code></span>
+                </div>
+              </div>
+              <span class="region-badge" [attr.data-region]="uf.region">
+                {{ uf.region }}
+              </span>
+            </div>
+          </mat-card-header>
+
+          <mat-card-content>
+            <div class="file-details-section">
+              <!-- ZIP status -->
+              <div class="status-row">
+                <div class="status-col">
+                  <span class="status-title">Pacote ZIP:</span>
+                  @if (uf.zipExists) {
+                    <span class="status-pill downloaded">
+                      <mat-icon inline>check_circle</mat-icon> Baixado ({{ formatBytes(uf.zipSizeBytes) }})
+                    </span>
+                  } @else {
+                    <span class="status-pill not-downloaded">
+                      <mat-icon inline>radio_button_unchecked</mat-icon> Não baixado
+                    </span>
+                  }
+                </div>
+
+                <!-- CSV extracted status -->
+                <div class="status-col">
+                  <span class="status-title">Base CSV:</span>
+                  @if (uf.isExtracted && uf.csvExists) {
+                    <span class="status-pill extracted">
+                      <mat-icon inline>table_chart</mat-icon> Extraído ({{ formatBytes(uf.csvSizeBytes) }})
+                    </span>
+                  } @else if (uf.zipExists) {
+                    <span class="status-pill pending-extract">
+                      <mat-icon inline>hourglass_empty</mat-icon> Aguardando extração
+                    </span>
+                  } @else {
+                    <span class="status-pill not-downloaded">
+                      <mat-icon inline>cancel</mat-icon> Indisponível
+                    </span>
+                  }
+                </div>
+              </div>
+
+              @if (uf.updatedAt) {
+                <div class="date-row">
+                  <mat-icon inline>schedule</mat-icon> Modificado em: {{ uf.updatedAt | date:'short' }}
+                </div>
+              }
+            </div>
+
+            <div class="actions-row">
+              <!-- Download button -->
+              <button
+                mat-flat-button
+                color="primary"
+                (click)="downloadUf(uf)"
+                [disabled]="isOperationActive(uf.sigla) || isBatchDownloading()">
+                @if (isOperationActive(uf.sigla)) {
+                  <mat-icon>hourglass_top</mat-icon> Processando...
+                } @else if (uf.zipExists) {
+                  <mat-icon>sync</mat-icon> Rebaixar
+                } @else {
+                  <mat-icon>download</mat-icon> Baixar CNEFE
+                }
+              </button>
+
+              <!-- Extract button if ZIP exists but not extracted -->
+              @if (uf.zipExists && (!uf.isExtracted || !uf.csvExists)) {
+                <button
+                  mat-stroked-button
+                  (click)="extractUf(uf)"
+                  [disabled]="isOperationActive(uf.sigla) || isBatchDownloading()"
+                  matTooltip="Descompactar CSV de endereços">
+                  <mat-icon>unarchive</mat-icon> Extrair
+                </button>
+              }
+
+              <!-- Delete button -->
+              @if (uf.zipExists || uf.isExtracted) {
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="deleteUf(uf)"
+                  [disabled]="isOperationActive(uf.sigla) || isBatchDownloading()"
+                  matTooltip="Excluir ZIP e CSV desta UF">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    @if (filteredUfs().length === 0) {
+      <div class="empty-state">
+        <mat-icon>search_off</mat-icon>
+        <p>Nenhuma UF corresponde aos filtros aplicados.</p>
+      </div>
+    }
+  }
+</div>

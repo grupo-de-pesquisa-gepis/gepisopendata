@@ -105,6 +105,21 @@ export const routes: Routes = [
             (m) => m.PadraoMapasView
           ),
       },
+      {
+        path: 'settings/dados-abertos/cnefe-lat-lgt',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/cnefe-lat-lgt/cnefe-lat-lgt-view').then(
+            (m) => m.CnefeLatLgtView
+          ),
+      },
+      {
+        path: 'settings/dados-abertos/lat-lgt',
+        loadComponent: () =>
+          import('./components/views/desktop/settings/dados-abertos/cnefe-lat-lgt/cnefe-lat-lgt-view').then(
+            (m) => m.CnefeLatLgtView
+          ),
+      },
     ],
   },
 ];
+

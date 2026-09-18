@@ -6,6 +6,7 @@ pub mod dictionary_parser;
 pub mod etl_service;
 pub mod github_client;
 pub mod ibge_malhas_service;
+pub mod ibge_cnefe_service;
 
 #[allow(unused_imports)]
 pub use path_resolver::*;
@@ -17,3 +18,5 @@ pub use dictionary_parser::DictionaryParser;
 pub use etl_service::EtlService;
 pub use github_client::GithubClient;
 pub use ibge_malhas_service::IbgeMalhasService;
+pub use ibge_cnefe_service::IbgeCnefeService;
+

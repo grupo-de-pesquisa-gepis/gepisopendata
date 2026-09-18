@@ -69,11 +69,18 @@ fn main() {
             publish_analysis,
             list_pull_requests,
             get_ibge_malhas_status,
+
             download_ibge_malha,
             delete_ibge_malha,
             open_ibge_malhas_folder,
-            get_or_load_ibge_geojson
+            get_or_load_ibge_geojson,
+            get_ibge_cnefe_status,
+            download_ibge_cnefe_uf,
+            extract_ibge_cnefe_uf,
+            delete_ibge_cnefe_uf,
+            open_ibge_cnefe_folder
         ])
+
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();
             if let Err(e) = logging::init_logging(&app_data_dir) {

@@ -8,4 +8,6 @@ export * from './analysis-api.service';
 export * from './github-api.service';
 export * from './dataset-state.service';
 export * from './ibge-malhas-api.service';
+export * from './ibge-cnefe-api.service';
+
 
