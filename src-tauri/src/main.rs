@@ -81,6 +81,7 @@ fn main() {
             open_ibge_cnefe_folder,
             get_cnefe_inep_summary,
             query_cnefe_inep_schools,
+            export_cnefe_inep_csv,
             run_cnefe_inep_match
         ])
 

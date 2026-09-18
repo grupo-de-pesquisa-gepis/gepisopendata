@@ -102,6 +102,19 @@ pub async fn query_cnefe_inep_schools(
 }
 
 #[tauri::command]
+pub async fn export_cnefe_inep_csv(
+    app: tauri::AppHandle,
+    query: CnefeSchoolQuery,
+) -> Result<String, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Falha ao resolver app_data_dir: {}", e))?;
+
+    IbgeCnefeService::export_schools_comparison_csv(&app_data_dir, query)
+}
+
+#[tauri::command]
 pub async fn run_cnefe_inep_match(
     app: tauri::AppHandle,
     req: crate::models::CnefeInepMatchRequest,
@@ -113,4 +126,7 @@ pub async fn run_cnefe_inep_match(
 
     IbgeCnefeService::run_matching(&app, &app_data_dir, req).await
 }
+
+
+
 

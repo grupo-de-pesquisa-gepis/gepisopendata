@@ -72,6 +72,7 @@ describe('CnefeInepEscolasView', () => {
       'getComparisonSummary',
       'querySchoolsComparison',
       'runMatching',
+      'exportSchoolsCsv',
       'openFolder',
     ]);
     (cnefeApiSpy as any).downloadProgress = signal(null);
@@ -79,6 +80,7 @@ describe('CnefeInepEscolasView', () => {
     cnefeApiSpy.getComparisonSummary.and.returnValue(Promise.resolve(mockSummary));
     cnefeApiSpy.querySchoolsComparison.and.returnValue(Promise.resolve(mockQueryResult));
     cnefeApiSpy.runMatching.and.returnValue(Promise.resolve(mockSummary));
+    cnefeApiSpy.exportSchoolsCsv.and.returnValue(Promise.resolve('\ufeffCO_ENTIDADE;NO_ENTIDADE\r\n35030806;ESCOLA HELEN KELLER\r\n'));
     cnefeApiSpy.openFolder.and.returnValue(Promise.resolve());
 
     await TestBed.configureTestingModule({
@@ -114,6 +116,16 @@ describe('CnefeInepEscolasView', () => {
     await fixture.whenStable();
     await component.runReprocess();
     expect(cnefeApiSpy.runMatching).toHaveBeenCalled();
+  });
+
+  it('should export filtered records to CSV', async () => {
+    await fixture.whenStable();
+    spyOn(window.URL, 'createObjectURL').and.returnValue('blob:http://localhost/mock-blob');
+    spyOn(window.URL, 'revokeObjectURL').and.stub();
+    await component.exportToCsv();
+    expect(cnefeApiSpy.exportSchoolsCsv).toHaveBeenCalledWith(jasmine.objectContaining({
+      status: 'all',
+    }));
   });
 
   it('should return correct status classes and labels', () => {

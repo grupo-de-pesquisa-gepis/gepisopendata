@@ -60,6 +60,7 @@ export class CnefeInepEscolasView implements OnInit {
   isLoading = signal(true);
   isQuerying = signal(false);
   isMatching = signal(false);
+  isExporting = signal(false);
 
   matchProgress = this.cnefeApi.matchProgress;
 
@@ -156,6 +157,44 @@ export class CnefeInepEscolasView implements OnInit {
       });
     } finally {
       this.isMatching.set(false);
+    }
+  }
+
+  async exportToCsv(): Promise<void> {
+    if (this.isExporting() || this.totalRecords() === 0) return;
+    this.isExporting.set(true);
+    try {
+      const q: CnefeSchoolQuery = {
+        uf: this.selectedUf() === 'all' ? undefined : this.selectedUf(),
+        status: this.selectedStatus(),
+        search: this.searchQuery().trim() || undefined,
+      };
+      const csvContent = await this.cnefeApi.exportSchoolsCsv(q);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ufStr = this.selectedUf() === 'all' ? 'todas_ufs' : this.selectedUf().toLowerCase();
+      const statusStr = this.selectedStatus();
+      const today = new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `escolas_cnefe_inep_${ufStr}_${statusStr}_${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      this.snackBar.open(
+        `Arquivo CSV exportado com sucesso (${this.totalRecords().toLocaleString('pt-BR')} registros)!`,
+        'OK',
+        { duration: 4000 }
+      );
+    } catch (err: any) {
+      console.error('Erro ao exportar CSV:', err);
+      this.snackBar.open('Erro ao exportar CSV: ' + (err?.message || err), 'Fechar', {
+        duration: 4000,
+      });
+    } finally {
+      this.isExporting.set(false);
     }
   }
 

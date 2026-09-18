@@ -185,4 +185,17 @@ export class IbgeCnefeApiService {
     }
     return await invoke<CnefeSchoolSummary>('run_cnefe_inep_match', { req });
   }
+
+  async exportSchoolsCsv(query: CnefeSchoolQuery): Promise<string> {
+    if (!isTauri()) {
+      const res = await this.querySchoolsComparison(query);
+      const header = 'CO_ENTIDADE;NO_ENTIDADE;SG_UF;CO_UF;NO_MUNICIPIO;CO_MUNICIPIO;CO_CEP;DS_ENDERECO;NU_ENDERECO;NO_BAIRRO;TP_DEPENDENCIA;TP_LOCALIZACAO;STATUS_GEOLOCALIZACAO;LATITUDE;LONGITUDE;CNEFE_NV_GEO_COORD;CNEFE_DSC_ESTABELECIMENTO;CONFIANCA_NOME\r\n';
+      const lines = res.records.map((r) =>
+        `${r.coEntidade};${r.noEntidade};${r.sgUf};${r.coUf};${r.noMunicipio};${r.coMunicipio};${r.coCep};${r.dsEndereco};${r.nuEndereco};${r.noBairro};${r.tpDependencia};${r.tpLocalizacao};${r.statusGeolocalizacao};${r.latitude || ''};${r.longitude || ''};${r.cnefeNvGeoCoord || ''};${r.cnefeDscEstabelecimento || ''};${r.confiancaNome || ''}\r\n`
+      );
+      return '\ufeff' + header + lines.join('');
+    }
+    return await invoke<string>('export_cnefe_inep_csv', { query });
+  }
 }
+

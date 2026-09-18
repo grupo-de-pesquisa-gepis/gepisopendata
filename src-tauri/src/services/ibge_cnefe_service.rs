@@ -621,13 +621,11 @@ impl IbgeCnefeService {
         }
     }
 
-    pub fn query_schools_comparison(
+    pub fn filter_records_internal(
         app_data_dir: &Path,
-        query: CnefeSchoolQuery,
-    ) -> CnefeSchoolComparisonResult {
-        let summary = Self::get_comparison_summary(app_data_dir);
+        query: &CnefeSchoolQuery,
+    ) -> Vec<CnefeSchoolRecord> {
         let escolas_csv = Self::find_escolas_dados_csv(app_data_dir);
-
         let mut matched_records = Vec::new();
 
         if let Some(csv_path) = escolas_csv {
@@ -767,6 +765,16 @@ impl IbgeCnefeService {
             }
         }
 
+        matched_records
+    }
+
+    pub fn query_schools_comparison(
+        app_data_dir: &Path,
+        query: CnefeSchoolQuery,
+    ) -> CnefeSchoolComparisonResult {
+        let summary = Self::get_comparison_summary(app_data_dir);
+        let matched_records = Self::filter_records_internal(app_data_dir, &query);
+
         let total_records = matched_records.len();
         let page = query.page.unwrap_or(1).max(1);
         let page_size = query.page_size.unwrap_or(50).clamp(1, 500);
@@ -789,6 +797,63 @@ impl IbgeCnefeService {
             page,
             page_size,
         }
+    }
+
+    pub fn export_schools_comparison_csv(
+        app_data_dir: &Path,
+        query: CnefeSchoolQuery,
+    ) -> Result<String, String> {
+        let records = Self::filter_records_internal(app_data_dir, &query);
+        let mut csv = String::from("\u{feff}"); // UTF-8 BOM for Microsoft Excel
+        csv.push_str("CO_ENTIDADE;NO_ENTIDADE;SG_UF;CO_UF;NO_MUNICIPIO;CO_MUNICIPIO;CO_CEP;DS_ENDERECO;NU_ENDERECO;NO_BAIRRO;TP_DEPENDENCIA;TP_LOCALIZACAO;STATUS_GEOLOCALIZACAO;LATITUDE;LONGITUDE;CNEFE_NV_GEO_COORD;CNEFE_DSC_ESTABELECIMENTO;CONFIANCA_NOME\r\n");
+
+        let escape_csv = |val: &str| -> String {
+            if val.contains(';') || val.contains('"') || val.contains('\n') || val.contains('\r') {
+                format!("\"{}\"", val.replace('"', "\"\""))
+            } else {
+                val.to_string()
+            }
+        };
+
+        for r in &records {
+            let tp_dep_str = match r.tp_dependencia.as_str() {
+                "1" => "Federal",
+                "2" => "Estadual",
+                "3" => "Municipal",
+                "4" => "Privada",
+                other => other,
+            };
+            let tp_loc_str = match r.tp_localizacao.as_str() {
+                "1" => "Urbana",
+                "2" => "Rural",
+                other => other,
+            };
+
+            let line = format!(
+                "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}\r\n",
+                escape_csv(&r.co_entidade),
+                escape_csv(&r.no_entidade),
+                escape_csv(&r.sg_uf),
+                escape_csv(&r.co_uf),
+                escape_csv(&r.no_municipio),
+                escape_csv(&r.co_municipio),
+                escape_csv(&r.co_cep),
+                escape_csv(&r.ds_endereco),
+                escape_csv(&r.nu_endereco),
+                escape_csv(&r.no_bairro),
+                escape_csv(tp_dep_str),
+                escape_csv(tp_loc_str),
+                escape_csv(&r.status_geolocalizacao),
+                escape_csv(r.latitude.as_deref().unwrap_or("")),
+                escape_csv(r.longitude.as_deref().unwrap_or("")),
+                escape_csv(r.cnefe_nv_geo_coord.as_deref().unwrap_or("")),
+                escape_csv(r.cnefe_dsc_estabelecimento.as_deref().unwrap_or("")),
+                escape_csv(r.confianca_nome.as_deref().unwrap_or(""))
+            );
+            csv.push_str(&line);
+        }
+
+        Ok(csv)
     }
 
     pub async fn run_matching(

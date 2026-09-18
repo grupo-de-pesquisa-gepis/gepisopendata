@@ -17,6 +17,10 @@
     <button mat-stroked-button (click)="openFolder()" title="Abrir pasta onde estão os dados">
       <mat-icon>folder_open</mat-icon> Abrir Pasta
     </button>
+    <button mat-stroked-button color="primary" (click)="exportToCsv()" [disabled]="isLoading() || isQuerying() || isExporting() || totalRecords() === 0" title="Exportar registros filtrados para CSV">
+      <mat-icon>{{ isExporting() ? 'hourglass_top' : 'file_download' }}</mat-icon>
+      <span>{{ isExporting() ? 'Exportando...' : 'Exportar CSV' }}</span>
+    </button>
     <button mat-flat-button color="primary" (click)="runReprocess()" [disabled]="isLoading() || isMatching()" title="Executar ou reprocessar cruzamento">
       <mat-icon>{{ isMatching() ? 'hourglass_top' : 'sync' }}</mat-icon>
       <span>{{ isMatching() ? 'Processando...' : 'Reprocessar Cruzamento' }}</span>
@@ -275,6 +279,20 @@
           </button>
         }
       </mat-form-field>
+
+      <button
+        mat-flat-button
+        color="primary"
+        class="export-filter-btn"
+        (click)="exportToCsv()"
+        [disabled]="isLoading() || isQuerying() || isExporting() || totalRecords() === 0"
+        title="Exportar registros filtrados para CSV">
+        <mat-icon>{{ isExporting() ? 'hourglass_top' : 'file_download' }}</mat-icon>
+        <span>{{ isExporting() ? 'Exportando...' : 'Exportar CSV' }}</span>
+        @if (totalRecords() > 0) {
+          <span class="count-badge">({{ totalRecords() | number }})</span>
+        }
+      </button>
     </div>
   </div>
 

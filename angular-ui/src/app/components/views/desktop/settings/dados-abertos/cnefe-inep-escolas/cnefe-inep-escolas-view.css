@@ -388,6 +388,22 @@
   min-width: 280px;
 }
 
+.export-filter-btn {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.export-filter-btn .count-badge {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+}
+
 /* Table Card */
 .table-card {
   background: #ffffff;
