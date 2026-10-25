@@ -1,0 +1,124 @@
+---
+- name: Configure GitHub collaboration settings using GitHub CLI (gh)
+  hosts: localhost
+  connection: local
+  vars:
+    project_dir: "{{ playbook_dir }}"
+    app_identifier: "com.gepis.dadosabertos"
+    config_dir: "{{ ansible_facts['env']['XDG_CONFIG_HOME'] | default(ansible_facts['env']['HOME'] ~ '/.config', true) }}/{{ app_identifier }}"
+    config_file: "{{ config_dir }}/github-config.json"
+    env_file: "{{ project_dir }}/.env"
+    github_owner: "grupo-de-pesquisa-gepis"
+    github_repo: "gepisopendata"
+    github_pr_target_branch: "production"
+    gh_clean_env:
+      GITHUB_TOKEN: ""
+      GH_TOKEN: ""
+
+  tasks:
+    - name: Verify if GitHub CLI (gh) is installed
+      ansible.builtin.command:
+        cmd: gh --version
+      register: gh_version_check
+      changed_when: false
+      failed_when: false
+
+    - name: Install GitHub CLI (gh) on Fedora if missing
+      become: true
+      ansible.builtin.dnf:
+        name:
+          - gh
+          - jq
+        state: present
+      when: gh_version_check.rc != 0 and ansible_facts['os_family'] | default('') == 'RedHat'
+
+    - name: Check GitHub CLI authentication status (using keyring/stored credentials)
+      ansible.builtin.command:
+        cmd: gh auth status
+      environment: "{{ gh_clean_env }}"
+      register: gh_auth_status
+      changed_when: false
+      failed_when: gh_auth_status.rc != 0
+
+    - name: Retrieve GitHub access token via gh CLI
+      ansible.builtin.command:
+        cmd: gh auth token
+      environment: "{{ gh_clean_env }}"
+      register: gh_token_res
+      changed_when: false
+      no_log: true
+
+    - name: Retrieve authenticated GitHub username via gh CLI
+      ansible.builtin.command:
+        cmd: gh api user --jq .login
+      environment: "{{ gh_clean_env }}"
+      register: gh_user_res
+      changed_when: false
+
+    - name: Set resolved GitHub credentials facts
+      ansible.builtin.set_fact:
+        resolved_github_username: "{{ github_username | default(gh_user_res.stdout | trim, true) }}"
+        resolved_github_token: "{{ gh_token_res.stdout | trim }}"
+      no_log: true
+
+    - name: Ensure Tauri application config directory exists
+      ansible.builtin.file:
+        path: "{{ config_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Write GitHub collaboration config ({{ config_file }}) for CollaborationSettingsView
+      ansible.builtin.copy:
+        dest: "{{ config_file }}"
+        mode: "0600"
+        content: |
+          {
+            "username": {{ resolved_github_username | to_json }},
+            "token": {{ resolved_github_token | to_json }},
+            "owner": {{ github_owner | to_json }},
+            "repo": {{ github_repo | to_json }},
+            "pr_target_branch": {{ github_pr_target_branch | to_json }}
+          }
+      no_log: true
+
+    - name: Update root .env file for development environment fallback
+      ansible.builtin.copy:
+        dest: "{{ env_file }}"
+        mode: "0600"
+        content: |
+          # Gerado automaticamente via ansible-playbook-configure-github-collaboration.yml
+          GITHUB_USERNAME={{ resolved_github_username }}
+          GITHUB_TOKEN={{ resolved_github_token }}
+          GITHUB_OWNER={{ github_owner }}
+          GITHUB_REPO={{ github_repo }}
+          GITHUB_PR_TARGET_BRANCH={{ github_pr_target_branch }}
+      no_log: true
+
+    - name: Validate repository access and push permissions via GitHub API
+      ansible.builtin.uri:
+        url: "https://api.github.com/repos/{{ github_owner }}/{{ github_repo }}"
+        method: GET
+        headers:
+          Authorization: "token {{ resolved_github_token }}"
+          User-Agent: "Gepis-OpenData-App"
+          Accept: "application/vnd.github+json"
+        status_code: 200
+      register: repo_check
+      no_log: true
+
+    - name: Assert write/push permission on target repository
+      ansible.builtin.assert:
+        that:
+          - repo_check.json.permissions.push | default(false) | bool
+        fail_msg: "Conexão estabelecida, mas o usuário '{{ resolved_github_username }}' NÃO tem permissão de escrita em {{ github_owner }}/{{ github_repo }}."
+        success_msg: "Conexão bem-sucedida! Permissão de escrita confirmada em {{ github_owner }}/{{ github_repo }}."
+
+    - name: Display configuration summary
+      ansible.builtin.debug:
+        msg:
+          - "Configurações de Colaboração atualizadas com sucesso!"
+          - "Usuário GitHub : {{ resolved_github_username }}"
+          - "Repositório    : {{ github_owner }}/{{ github_repo }} (branch alvo: {{ github_pr_target_branch }})"
+          - "Permissão Push : {{ repo_check.json.permissions.push }}"
+          - "Arquivo Tauri  : {{ config_file }}"
+          - "Arquivo .env   : {{ env_file }}"
