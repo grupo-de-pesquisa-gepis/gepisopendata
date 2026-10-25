@@ -108,6 +108,9 @@ export class App implements OnInit, OnDestroy {
       case 'analises_descritivas':
         route = '/desktop/analysis/descritiva';
         break;
+      case 'mapa_tematico':
+        route = '/desktop/analysis/map';
+        break;
       case 'config_colaboracao':
         route = '/desktop/settings/collaboration';
         break;

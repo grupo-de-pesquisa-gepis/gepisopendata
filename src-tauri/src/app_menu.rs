@@ -13,7 +13,8 @@ pub fn setup_app_menu(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Er
     let selecionar_item = MenuItem::with_id(app, "selecionar_dados", "Selecionar Conjunto de Dados", true, None::<&str>)?;
     let configurar_item = MenuItem::with_id(app, "configurar_variaveis", "Configurar Variaveis", true, None::<&str>)?;
     let analises_item = MenuItem::with_id(app, "analises_descritivas", "Analises Descritivas", true, None::<&str>)?;
-    let analisar_submenu = Submenu::with_items(app, "Analisar Dados", true, &[&selecionar_item, &configurar_item, &analises_item])?;
+    let mapa_tematico_item = MenuItem::with_id(app, "mapa_tematico", "Mapa Temático Estatístico", true, None::<&str>)?;
+    let analisar_submenu = Submenu::with_items(app, "Analisar Dados", true, &[&selecionar_item, &configurar_item, &analises_item, &mapa_tematico_item])?;
 
     let config_github_item = MenuItem::with_id(app, "config_colaboracao", "Config Github", true, None::<&str>)?;
     let list_prs_item = MenuItem::with_id(app, "list_pull_requests", "List Pull Requests", true, None::<&str>)?;

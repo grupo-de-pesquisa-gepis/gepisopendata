@@ -78,6 +78,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'analysis/map',
+        loadComponent: () =>
+          import('./components/views/desktop/analysis/map/thematic-map-view').then(
+            (m) => m.ThematicMapView
+          ),
+      },
+      {
         path: 'settings/collaboration',
         loadComponent: () =>
           import('./components/views/desktop/settings/collaboration-settings-view').then(

@@ -1,0 +1,67 @@
+<div class="thematic-map-container">
+  <div class="thematic-header">
+    <div class="header-title-box">
+      <h1>
+        <mat-icon color="primary">map</mat-icon>
+        Mapa Temático Estatístico (IBGE)
+      </h1>
+      <p>Visualização geoespacial com dados quantitativos e percentuais por malha territorial.</p>
+    </div>
+
+    <button mat-stroked-button (click)="recenterMap()" [disabled]="isLoading()">
+      <mat-icon>center_focus_strong</mat-icon>
+      Recentrar Brasil
+    </button>
+  </div>
+
+  <mat-card class="controls-card" appearance="outlined">
+    <div class="controls-row">
+      <mat-form-field appearance="outline" class="level-select-field" subscriptSizing="dynamic">
+        <mat-label>Nível Geográfico da Malha</mat-label>
+        <mat-select [value]="selectedLevel()" (selectionChange)="onLevelChange($event.value)" [disabled]="isLoading()">
+          @for (lvl of availableLevels; track lvl.id) {
+            <mat-option [value]="lvl.id">{{ lvl.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <div class="summary-badges">
+        <span class="badge">
+          <mat-icon>layers</mat-icon>
+          {{ featuresCount() }} polígonos
+        </span>
+        <span class="badge">
+          <mat-icon>percent</mat-icon>
+          Métrica: % Proporção Territorial
+        </span>
+      </div>
+    </div>
+  </mat-card>
+
+  <mat-card class="map-viewport-card" appearance="outlined">
+    <div #mapContainer class="leaflet-map"></div>
+
+    @if (isLoading()) {
+      <div class="loading-overlay">
+        <mat-progress-spinner mode="indeterminate" diameter="48"></mat-progress-spinner>
+        <span>Carregando malha do IBGE e calculando métricas...</span>
+      </div>
+    }
+
+    @if (!isLoading() && maxPercent() > 0) {
+      <div class="legend-card">
+        <div class="legend-title">% Proporção por Polígono</div>
+        <div class="legend-gradient-bar">
+          @for (color of colorScale; track color) {
+            <div class="legend-step" [style.backgroundColor]="color"></div>
+          }
+        </div>
+        <div class="legend-labels">
+          <span>{{ minPercent().toFixed(2) }}%</span>
+          <span>{{ (maxPercent() / 2).toFixed(2) }}%</span>
+          <span>{{ maxPercent().toFixed(2) }}%</span>
+        </div>
+      </div>
+    }
+  </mat-card>
+</div>
