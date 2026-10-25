@@ -2183,6 +2183,7 @@
     "publishedArtifacts": [
       {
         "createdAt": "2026-08-07T13:50:39.307Z",
+        "customPercentTotal": null,
         "data": {
           "x": [
             "2022",
@@ -2201,14 +2202,34 @@
         },
         "id": "8d059fe5-2571-443f-b242-3fa5a7f953ad",
         "label": "Num Mat Ed Infantil 2021-1025",
+        "legendLabelMap": {
+          "QT_MAT_INF_INT": "XXXXXXX"
+        },
         "params": {
           "categoryVar": "NU_ANO_CENSO",
+          "customPercentTotal": null,
+          "legendLabelMap": {
+            "QT_MAT_INF_INT": "XXXXXXX"
+          },
           "metric": "sum",
-          "showBarValues": false,
+          "percentBaseMode": "series_sum",
+          "percentDecimals": 2,
+          "showBarValues": true,
           "statisticalType": "quantitativa_discreta",
+          "valueDisplayMode": "both",
           "valueVar": "QT_MAT_INF_INT"
         },
-        "type": "barchart"
+        "percentBaseMode": "series_sum",
+        "percentDecimals": 2,
+        "type": "barchart",
+        "valueDisplayMode": "both",
+        "xLabelMap": {
+          "2022": "Ano2022"
+        },
+        "xTitle": "Ano do Censo",
+        "yPrefix": "",
+        "ySuffix": "",
+        "yTitle": "Soma"
       },
       {
         "createdAt": "2026-08-07T13:51:38.386Z",
@@ -2419,7 +2440,7 @@
         "yTitle": "Contagem Num Linhas"
       }
     ],
-    "updatedAt": "2026-09-08T01:23:44.026065918+00:00",
+    "updatedAt": "2026-10-16T20:43:15.003014769+00:00",
     "variables": [
       {
         "description": "Ano do Censo",

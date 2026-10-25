@@ -1,303 +1,265 @@
-#+Title: Gepis Dados Abertos
+#+TITLE: Gepis Dados Abertos
 #+LANGUAGE: pt_BR
-#+DATE: 2026-03-27
+#+DATE: 2026-10-18
 
 
 * Introdução
 
-Este projeto é uma iniciativa do grupo de pesquisa Gepis no sentido de promover a utilização de dados abertos.
-
+O projeto *Gepis Dados Abertos* é uma iniciativa do grupo de pesquisa GEPIS voltada à coleta, processamento (ETL), análise estatística descritiva, visualização geoespacial e publicação colaborativa de bases de dados abertos brasileiros (como microdados do INEP/Censo Escolar, CNEFE e Malhas Territoriais do IBGE).
 
 
 * Visão Geral do Projeto
 
-- Nome*: gepis-dados-abertos
-- *Tipo*: Aplicativo desktop usando Tauri v2 (Release Candidate)
-- *Frontend*: Angular 20.3.0
-- *Backend*: Rust
-- *Plataforma*: Multiplataforma (Linux, Windows, macOS via Tauri)
-- *Versão*: 0.1.0
+- *Nome*: ~gepis-dados-abertos~
+- *Identificador*: ~com.gepis.dadosabertos~
+- *Tipo*: Aplicativo Desktop Híbrido (Tauri v2) e Aplicação Web (Angular)
+- *Frontend*: Angular 20.3 com Angular Material, Plotly.js e Leaflet
+- *Backend*: Rust (Edição 2021) com arquitetura modular desacoplada (Core Puro + Adaptadores Tauri IPC)
+- *Plataforma*: Multiplataforma (Linux, Windows e macOS via Tauri)
+- *Versão*: 0.1.2
 
 
 * Arquitetura
 
-** Pilha Tecnológica
-- *Framework Desktop*: Tauri v2 (RC) - Framework baseado em Rust para aplicativos desktop
-- *Frontend*: Angular 20 com TypeScript
-- *Backend*: Rust com runtime assíncrono (Tokio)
-- *Cliente HTTP*: Reqwest 0.12 (cliente HTTP assíncrono)
-- *Suporte a Containers*: Bollard 0.19.4 (cliente da API Docker)
-- *Configuração*: Suporte YAML via serde_yaml
-- *Ferramenta de Build*: Cargo (Rust)
+O backend Rust segue princípios de *Arquitetura Limpa / Hexagonal* (detalhados em [[file:FASE1_BACKEND_MODULARIZATION.org][FASE1_BACKEND_MODULARIZATION.org]]):
+- *Core Engine (~src-tauri/src/services/~ e ~src-tauri/src/models/~)*: Lógica de negócio 100% agnóstica ao Tauri, operando com tipos nativos do Rust para download assíncrono, descompactação ZIP, leitura de dicionários de dados em Excel, pipeline de dados em Polars, integração com APIs do IBGE (CNEFE e Malhas) e automação GitHub REST.
+- *Adaptadores IPC (~src-tauri/src/commands/~)*: Comandos ~#[tauri::command]~ finos que resolvem caminhos do sistema operacional, emitem eventos de progresso para a interface Angular e delegam o processamento ao Core.
+- *Persistência Atômica (~services/persistence/json_store.rs~)*: Armazenamento JSON genérico com escrita atômica e sincronização dual-write (ambiente de desenvolvimento e produção) para catálogos de datasets e histórico de análises.
 
+** Pilha Tecnológica
+
+- *Framework Desktop*: Tauri 2.0 (~tray-icon~, menus nativos, capabilities)
+- *Frontend*: Angular 20.3, TypeScript 5.9, Angular Material, RxJS 7.8
+- *Visualização de Dados e Mapas*: Plotly.js (~angular-plotly.js~) e Leaflet (~leaflet~)
+- *Motor de Dados e ETL (Backend)*:
+  - *Polars 0.41* (~lazy~, ~csv~) para agregações e filtragens de alto desempenho em grandes volumes de microdados
+  - *Calamine 0.24* para leitura de dicionários de dados em planilhas Excel (~.xlsx~ / ~.xls~)
+  - *CSV 1.3*, *Zip 2.3* e *Flate2 1.0* para ingestão e extração de arquivos compactados
+- *Rede e Assincronismo*: Tokio 1.x + Reqwest 0.12 (~json~, ~gzip~, ~stream~)
+- *Observabilidade*: ~tracing~, ~tracing-subscriber~ e ~tracing-appender~ com rotação de arquivos de log
 
 ** Plugins Ativados do Tauri
-- ~tauri-plugin-shell~ - Execução de comandos shell
-- ~tauri-plugin-http~ - Requisições HTTP
-- ~tauri-plugin-fs~ - Operações de sistema de arquivos
+
+- ~tauri-plugin-http~ — Requisições HTTP assíncronas
+- ~tauri-plugin-fs~ — Operações no sistema de arquivos local
+- ~tauri-plugin-dialog~ — Diálogos nativos de seleção de arquivos e diretórios
+- ~tauri-plugin-shell~ — Abertura segura de links externos (~https?://~)
+- ~tauri-plugin-mcp-gui~ — Integração de inspeção e automação de interface
 
 
 * Estrutura do Projeto
 
-#+BEGIN_SRC
-gepis-dados-abertos/
-├── src/                           # Código backend em Rust
-│   └── main.rs                    # Ponto de entrada da aplicação Tauri
-├── angular-ui/                    # Aplicação frontend Angular
+#+BEGIN_SRC text
+gepisopendata/
+├── src-tauri/                          # Backend em Rust (Tauri v2 + Core Engine)
 │   ├── src/
-│   │   ├── app/
-│   │   │   ├── components/
-│   │   │   │   ├── layout/        # Cabeçalho fixo e barra de status
-│   │   │   │   └── views/         # Telas da aplicação
-│   │   │   │       ├── apps-home-view
-│   │   │   │       ├── desktop-home-view
-│   │   │   │       ├── view-base
-│   │   │   │       ├── view-config
-│   │   │   │       └── view-home
-│   │   │   └── services/          # Serviços de configuração
-│   │   └── main.ts
+│   │   ├── main.rs                     # Ponto de entrada binário
+│   │   ├── lib.rs                      # Registro de plugins, estado e comandos Tauri
+│   │   ├── app_menu.rs                 # Menu nativo da janela e atalhos
+│   │   ├── logging.rs                  # Configuração de logs estruturados (tracing)
+│   │   ├── models/                     # Structs de domínio (Dataset, Analysis, Dictionary, GitHub, IBGE)
+│   │   │   ├── dataset.rs
+│   │   │   ├── analysis.rs
+│   │   │   ├── dictionary.rs
+│   │   │   ├── github.rs
+│   │   │   ├── ibge_cnefe.rs
+│   │   │   └── ibge_malhas.rs
+│   │   ├── services/                   # Core puro em Rust (agnóstico ao Tauri)
+│   │   │   ├── downloader.rs           # Download com streaming de progresso e extração ZIP
+│   │   │   ├── etl_service.rs          # Processamento analítico e agregações via Polars
+│   │   │   ├── dictionary_parser.rs    # Parser de dicionários Excel (Calamine)
+│   │   │   ├── ibge_cnefe_service.rs   # Processamento de dados do CNEFE (IBGE)
+│   │   │   ├── ibge_malhas_service.rs  # Consulta e cache de malhas territoriais GeoJSON (IBGE)
+│   │   │   ├── github_client.rs        # Automação de branches, commits e Pull Requests via GitHub API
+│   │   │   ├── path_resolver.rs        # Resolução de diretórios AppData e desenvolvimento
+│   │   │   ├── registry_repo.rs        # Repositório de metadados de datasets e análises
+│   │   │   └── persistence/
+│   │   │       └── json_store.rs       # Persistência JSON genérica e atômica
+│   │   └── commands/                   # Adaptadores IPC (#[tauri::command])
+│   │       ├── dataset_commands.rs
+│   │       ├── analysis_commands.rs
+│   │       ├── github_commands.rs
+│   │       ├── ibge_cnefe_commands.rs
+│   │       ├── ibge_malhas_commands.rs
+│   │       └── system_commands.rs
+│   ├── capabilities/                   # Permissões de segurança do Tauri v2
+│   └── build.rs                        # Script de build do Cargo/Tauri
+├── angular-ui/                         # Aplicação Frontend Angular 20
+│   ├── public/data/                    # Catálogos JSON (datasets-registry.json, analyses-history.json)
+│   ├── src/app/
+│   │   ├── components/
+│   │   │   ├── layout/                 # Cabeçalho (fixed-head), busca na página (fixed-search) e barra de status
+│   │   │   └── views/
+│   │   │       ├── desktop/            # Funcionalidades exclusivas do aplicativo Desktop
+│   │   │       │   ├── desktop-home-view/
+│   │   │       │   ├── datasets/       # Download (get) e catálogo (list) de bases de dados
+│   │   │       │   ├── analysis/       # Configuração (config), seleção (select) e análise descritiva
+│   │   │       │   └── settings/       # Configurações de dados abertos e envio de Pull Requests
+│   │   │       └── web/                # Visualização Web pública (view-home, view-about)
+│   │   ├── guards/                     # Guardas de rota (is-tauri.guard.ts)
+│   │   ├── models/                     # Interfaces TypeScript espelhando o domínio do backend
+│   │   └── services/                   # Clientes de API IPC/Web e gerenciamento de estado
 │   └── angular.json
-├── gen/                           # Esquemas gerados
-│   └── schemas/                   # Esquemas JSON para validação
-├── icons/                         # Ícones da aplicação
-├── build.rs                       # Script de build do Cargo
-├── Cargo.toml                     # Dependências Rust
-├── tauri.conf.json                # Configuração do Tauri
-└── package.json                   # Configuração npm (nível raiz)
+├── Cargo.toml                          # Manifesto do workspace/pacote Rust
+├── tauri.conf.json                     # Configuração de janela, bundle e recursos do Tauri
+├── package.json                        # Scripts e CLI do Tauri no nível raiz
+├── .env.example                        # Template de variáveis de ambiente (integração GitHub)
+├── init.el                             # Configuração isolada do Emacs para desenvolvimento Rust + Tauri
+├── setup-fedora.sh                     # Script automatizado de preparação do ambiente no Fedora Linux
+├── setup-windows.bat                   # Script automatizado de preparação do ambiente no Windows
+├── tail-log.sh                         # Utilitário Linux/macOS para acompanhar logs em tempo real
+└── tail-log.ps1                        # Utilitário PowerShell para acompanhar logs no Windows
 #+END_SRC
-
-** Estrutura da Aplicação Angular
-
-- *Views*: apps-home-view, desktop-home-view, view-base, view-config, view-home
-- *Serviços*: config.service, environment, tauri-config, web-config
-- *Componentes de Layout*: fixed-head, fixed-statusbar
-- *Estilos*: custom-theme.scss, styles.css
-
-
-* Build e Desenvolvimento
-
-** pre requisitos para o build
-*** no fedora
-sudo dnf install libxdo-devel libxdo
-
-** Comandos de Build
-
-#+END_SRC
-#+name: echo $(pwd)
-#+begin_src shell :session s1 :exports both :results output
-  export projdir="/home/wgn/WORKING/Projects-Srcs/Projects-Srcs-GEPIS/gepis-dados-abertos"
-  cd $projdir/angular-ui
-  npm start
-#+end_src
-
-#+RESULTS: echo $(pwd)
-** Comandos de Build
-
-#+BEGIN_SRC bash
-# Desenvolvimento com recarga automática
-npm run start:dev
-npm run tauri:dev
-cargo tauri dev
-
-# Build para produção
-npm run tauri:prod
-cargo tauri build
-
-
-# Apenas frontend
-npm run ng-build-dev              # Build de desenvolvimento
-npm run ng-build-prod             # Build de produção
-npm run start                      # ng serve para desenvolvimento web
-
-# Build e execução de produção
-npm run start:prod
-
-#+END_SRC
-#+name: 
-#+begin_src shell :session s1 :exports both :results output
-  npm run tauri:dev
-#+end_src
-
-
-** Saída de Build
-
-- *Frontend*: Compila para ~www/browser~ (configurado em tauri.conf.json)
-- *Binário*: ~target/release/gepis-dados-abertos~
-- *Pacotes*: RPM e DEB
-
-
-* Configuração da Aplicação
-
-** Configurações da Janela
-
-- *Título*: "Gepis Dados Abertos"
-- *Tamanho Padrão*: 1200x800 pixels
-- *API Tauri*: Disponível globalmente
-
-
-** Segurança
-
-- *CSP (Content Security Policy)*: Nula (desabilitada)
-- *Plugin Shell*: Restrito a URLs https apenas
-
-
-** Ícones
-
-- *Formatos Suportados*: PNG (32x32, 128x128), ICNS (macOS), ICO (Windows)
-- *Localização*: Diretório ~icons/~
 
 
 * Dependências Principais
 
-** Crates Rust Essenciais
+** Crates Rust Essenciais (~Cargo.toml~)
 
-| Crate            | Versão | Propósito                              |
-|------------------+--------+----------------------------------------|
-| tauri            |  2.0.0 | Framework principal + tray-icon        |
-| tokio            |      1 | Runtime assíncrono (todas as features) |
-| reqwest          |   0.12 | Cliente HTTP com suporte JSON          |
-| bollard          | 0.19.4 | Cliente API Docker                     |
-| serde/serde_json |    1.0 | Serialização/desserialização           |
-| serde_yaml       | 0.9.34 | Suporte a configuração em YAML         |
-| dotenvy          | 0.15.7 | Carregamento de arquivos .env          |
+| Crate                                          | Versão | Propósito                                                    |
+|------------------------------------------------+--------+--------------------------------------------------------------|
+| ~tauri~                                        |  2.0.0 | Framework desktop principal (~tray-icon~)                    |
+| ~tauri-plugin-http~ / ~fs~ / ~dialog~ / ~shell~ |  2.0.0 | Plugins oficiais para HTTP, arquivos, diálogos e shell       |
+| ~tokio~                                        |    1.x | Runtime assíncrono (~full~)                                  |
+| ~reqwest~                                      |   0.12 | Cliente HTTP assíncrono (~json~, ~gzip~, ~stream~)           |
+| ~polars~                                       |   0.41 | Processamento tabular e consultas lazy sobre arquivos CSV    |
+| ~calamine~                                     |   0.24 | Leitura de planilhas Excel (dicionários de dados do INEP)    |
+| ~csv~ / ~zip~ / ~flate2~                       | 1.3 / 2.3 / 1.0 | Leitura de CSV e descompactação de arquivos ZIP/GZip |
+| ~serde~ / ~serde_json~                         |    1.0 | Serialização e desserialização de estruturas e JSON          |
+| ~tracing~ / ~tracing-subscriber~ / ~appender~  | 0.1 / 0.3 / 0.2 | Telemetria e geração de logs estruturados em arquivo |
+| ~chrono~ / ~time~ / ~uuid~                     | 0.4 / 0.3 / 1.7 | Manipulação de datas, timestamps e identificadores únicos |
+| ~dotenvy~                                      |   0.15 | Carregamento de variáveis de ambiente a partir de ~.env~     |
 
+** Bibliotecas Frontend (~angular-ui/package.json~)
 
-** Angular
-- *Angular*: 20.3.0 (versão mais recente)
-- *TypeScript*: Configurado para compilação rigorosa
-
-
-* Padrões de Desenvolvimento
-
-** Comunicação Frontend-Backend
-
-- Usa o plugin HTTP do Tauri para chamadas à API backend
-- Serviços interface com o sistema de configuração Tauri
-- Dependência de configuração via ambiente (arquivos .env presentes)
-
-
-** Gerenciamento de Configuração
-
-- Arquivos ~.env~ e ~.env-template~ presentes
-- Suporte a configuração em YAML no backend
-- Configuração baseada em serviços (tauri-config.service, web-config.service)
+| Pacote                            | Versão   | Propósito                                                |
+|-----------------------------------+----------+----------------------------------------------------------|
+| ~@angular/core~ / ~@angular/cli~  | ~20.3.18 | Framework SPA principal e ferramentas de compilação      |
+| ~@angular/material~ / ~cdk~       | ~20.2.14 | Componentes visuais Material Design                      |
+| ~@tauri-apps/api~                 | ~2.9.1   | Comunicação IPC entre Angular e backend Rust             |
+| ~angular-plotly.js~ / ~plotly.js~ | ^20.0.0  | Gráficos interativos para análises estatísticas          |
+| ~leaflet~                         | ^1.9.4   | Mapas interativos para malhas territoriais e dados CNEFE |
 
 
-** Qualidade de Código
+* Como Configurar, Construir e Executar
 
-- Prettier configurado: largura 100 caracteres, aspas simples
-- Parser Angular para arquivos HTML
-- TypeScript em modo strict
-- Suporte a testes do Angular CLI
+** 1. Configuração Automatizada do Ambiente
 
-
-* Recursos Gerados
-
-JSON schemas presentes em ~gen/schemas/~ para:
-- acl-manifests.json
-- capabilities.json
-- desktop-schema.json
-- linux-schema.json
-
-
-* Observações Importantes
-
-1. *Integração Docker*: Dependência Bollard sugere que a aplicação gerencia/interage com containers Docker
-
-2. *Suporte Multiplataforma*: Tauri empacota com suporte a RPM, DEB e geração de ícones para todas as plataformas
-
-3. *Versão de Ponta*: Tauri v2 RC - versão inicial/experimental
-
-4. *Build Concorrente*: Usa ~concurrently~ para builds paralelos de Angular + Tauri
-
-5. *Orientado a Configuração*: Ênfase em configuração por ambiente e baseada em serviços
-
-6. *Validação de Esquema*: Esquemas JSON sugerem validação de dados estruturados
-
-
-* Possível Caso de Uso
-
-Aplicação de dashboard/administrador para gerenciar "GEPIS" (possivelmente sistema de dados geoespaciais) com capacidades de orquestração de containers, usando Tauri para entrega multiplataforma em desktop.
-
-
-* Como Construir e Executar
-
-** Pré-requisitos
-
-- Toolchain Rust (para compilação com Cargo/Tauri)
-  #+BEGIN_SRC bash
-  # Instalar Rust (Linux/macOS)
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-  # Configurar ambiente (ou reinicie o terminal)
-  source "$HOME/.cargo/env"
-  # Instalar CLI do Tauri
-  cargo install tauri-cli
-  #+END_SRC
-
-- Dependências de Sistema (Linux/Fedora)
-  #+BEGIN_SRC bash
-  sudo dnf install webkit2gtk4.1-devel \
-      openssl-devel \
-      curl \
-      wget \
-      libayatana-appindicator3-devel \
-      librsvg2-devel \
-      gtk3-devel \
-      glib2-devel
-  #+END_SRC
-
-- Node.js/npm (para Angular)
-- Docker (provavelmente necessário para integração com bollard)
-
-** Desenvolvimento
+No *Fedora Linux*, execute o script de configuração na raiz do repositório para instalar pacotes de sistema (~webkit2gtk4.1-devel~, ~gtk3-devel~, ~libxdo-devel~, etc.), dependências npm e realizar o build inicial do frontend:
 
 #+BEGIN_SRC bash
-# Instalar dependências
-cd angular-ui
-npm install
-
-cd ..
-
-# Desenvolvimento com recarga automática (recomendado)
-npm run tauri:dev
-
-# Ou apenas frontend (Angular)
-npm run start
+./setup-fedora.sh
 #+END_SRC
 
+No *Windows*, utilize o script equivalente:
 
-** Homolog
+#+BEGIN_SRC cmd
+setup-windows.bat
+#+END_SRC
 
-** Produção
+*** Instalação Manual de Pré-requisitos (Fedora Linux)
+
+Caso prefira instalar manualmente as dependências de sistema no Fedora:
 
 #+BEGIN_SRC bash
-# Build completo para produção
+sudo dnf install -y \
+    glib2-devel \
+    gtk3-devel \
+    webkit2gtk4.1-devel \
+    libsoup3-devel \
+    openssl-devel \
+    libxdo-devel \
+    librsvg2-devel \
+    gcc \
+    gcc-c++ \
+    pkg-config \
+    rustfmt \
+    clippy
+#+END_SRC
+
+** 2. Variáveis de Ambiente (~.env~)
+
+Para habilitar o preenchimento automático das credenciais de colaboração com o GitHub (criação automatizada de branches e envio de Pull Requests com novas análises):
+
+#+BEGIN_SRC bash
+cp .env.example .env
+# Edite o arquivo .env informando GITHUB_USERNAME, GITHUB_TOKEN, GITHUB_OWNER e GITHUB_REPO
+#+END_SRC
+
+** 3. Comandos de Desenvolvimento e Build
+
+Os scripts principais de desenvolvimento ficam em ~angular-ui/package.json~:
+
+#+BEGIN_SRC bash
+cd angular-ui
+
+# Desenvolvimento completo (Angular em modo watch + janela desktop Tauri com hot-reload)
+npm run tauri:dev
+# (ou seu alias equivalente: npm run start:dev)
+
+# Apenas servidor web Angular (http://localhost:4200)
+npm run start
+
+# Compilação apenas do frontend Angular
+npm run ng-build-dev       # Build de desenvolvimento (gera www/browser)
+npm run ng-build-homolog   # Build de homologação
+npm run ng-build-prod      # Build de produção
+
+# Build completo do aplicativo Desktop para produção (gera binário e instaladores)
 npm run tauri:prod
 
-# Executar binário compilado
-../target/release/gepis-dados-abertos
-
-# Ou usar o script de produção
+# Compila para produção e inicia o binário gerado imediatamente
 npm run start:prod
 #+END_SRC
+
+Também é possível invocar o Tauri diretamente a partir da raiz do projeto:
+
+#+BEGIN_SRC bash
+npx tauri dev
+npx tauri build
+#+END_SRC
+
+** 4. Monitoramento de Logs em Tempo Real
+
+A aplicação grava logs detalhados no diretório de dados do usuário (~~/.local/share/com.gepis.dadosabertos/logs/~ no Linux ou ~%APPDATA%~ no Windows). Para acompanhar os logs em tempo real:
+
+#+BEGIN_SRC bash
+# Linux / macOS
+./tail-log.sh
+
+# Windows (PowerShell)
+.\tail-log.ps1
+#+END_SRC
+
+** 5. Desenvolvimento no Emacs (~init.el~)
+
+O repositório inclui um arquivo ~init.el~ autocontido na raiz, pré-configurado para desenvolvimento em Rust (~rust-mode~, ~cargo~, ~eglot~ + ~rust-analyzer~, ~corfu~, ~vertico~, ~magit~ e ~treemacs~), mantendo todos os pacotes isolados em ~.emacs-cache-gepisopendata/~:
+
+#+BEGIN_SRC bash
+emacs -q -l ./init.el
+#+END_SRC
+
+
+* Saída de Build e Empacotamento
+
+- *Frontend Compilado*: ~www/browser~ (referenciado por ~frontendDist~ em ~tauri.conf.json~)
+- *Recursos Empacotados (~bundle.resources~)*:
+  - ~angular-ui/public/data/datasets-registry.json~
+  - ~angular-ui/public/data/analyses-history.json~
+- *Binário Nativo*: ~target/release/gepis-dados-abertos~
+- *Formatos de Pacotes de Distribuição*:
+  - *Linux*: ~rpm~ (Fedora/RHEL) e ~deb~ (Debian/Ubuntu)
+  - *Windows*: ~nsis~ (`.exe`) e ~msi~ (incluindo suporte a cross-compile via ~ansible-playbook-fedora---build-windows-packages.yml~)
 
 
 * Arquivos de Configuração Importantes
 
 | Arquivo | Propósito |
-|---------|-----------|
-| ~src/main.rs~ | Ponto de entrada Tauri, inicialização de plugins |
-| ~angular-ui/src/app/~ | Componentes e roteamento Angular |
-| ~tauri.conf.json~ | Configuração de janela, bundle, permissões |
-| ~Cargo.toml~ | Dependências Rust e configuração de build |
-| ~angular-ui/package.json~ | Scripts npm e dependências Angular |
-| ~.env~ | Variáveis de ambiente para produção |
-| ~.env-template~ | Template para configuração de ambiente |
-
-
-* Publicação de Pacotes
-
-Os pacotes distribuidores são configurados como:
-- *RPM* - Para distribuições Fedora/RHEL
-- *DEB* - Para distribuições Debian/Ubuntu
-
+|---------+-----------|
+| ~Cargo.toml~ | Manifesto Rust na raiz (define ~src-tauri/src/lib.rs~ e ~src-tauri/src/main.rs~) |
+| ~tauri.conf.json~ | Configurações da janela (1200x800), recursos empacotados, segurança e instaladores |
+| ~src-tauri/capabilities/default.json~ | Permissões granulares das APIs do Tauri v2 |
+| ~angular-ui/package.json~ | Scripts de build (~tauri:dev~, ~tauri:prod~) e dependências do Angular 20 |
+| ~.env.example~ | Modelo documentado das variáveis de ambiente para integração com o GitHub |
+| ~FASE1_BACKEND_MODULARIZATION.org~ | Especificação arquitetural da separação entre Core Rust e adaptadores Tauri |
+| ~init.el~ | Configuração isolada do Emacs para Rust + Tauri |
