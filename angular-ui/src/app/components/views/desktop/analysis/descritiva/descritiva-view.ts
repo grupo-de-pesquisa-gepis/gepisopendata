@@ -257,6 +257,10 @@ export class DescritivaView implements OnInit {
     this.router.navigate(['/desktop/analysis/descritiva/barchart']);
   }
 
+  goToThematicMap() {
+    this.router.navigate(['/desktop/analysis/map']);
+  }
+
   goToArtifact(analysisId: string, artifactId: string) {
     this.router.navigate(['/published', analysisId, artifactId]);
   }

@@ -16,6 +16,7 @@ downloads/
 /angular-ui/public/data/*
 !/angular-ui/public/data/datasets-registry.json
 !/angular-ui/public/data/analyses-history.json
+!/angular-ui/public/data/*.geojson
 /home/wgn/WORKING/Projects-Srcs/Projects-Srcs-GEPIS/AnsibleArtifacts/vars/vault.yml
 
 # Emacs project-isolated cache and package environments

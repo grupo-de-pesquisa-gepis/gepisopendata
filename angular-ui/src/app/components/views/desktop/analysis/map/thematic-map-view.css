@@ -17,6 +17,19 @@
   gap: 12px;
 }
 
+.title-with-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .header-title-box h1 {
   margin: 0;
   font-size: 1.5rem;
@@ -39,12 +52,16 @@
 .controls-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.level-select-field {
-  min-width: 240px;
+.control-field {
+  min-width: 220px;
+}
+
+.control-field-sm {
+  min-width: 170px;
 }
 
 .summary-badges {

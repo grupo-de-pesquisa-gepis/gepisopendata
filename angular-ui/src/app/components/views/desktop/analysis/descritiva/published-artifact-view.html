@@ -6,17 +6,24 @@
     
     @if (!isEditing()) {
       <h1 appAutoTooltip>{{ artifact()?.label || 'Visualizar Publicação' }}</h1>
+      @if (isMapArtifact()) {
+        <span class="spacer"></span>
+        <button mat-stroked-button (click)="recenterMap()">
+          <mat-icon>center_focus_strong</mat-icon>
+          Recentrar Brasil
+        </button>
+      }
       @if (isDesktop()) {
-        <button mat-icon-button (click)="startEdit()" matTooltip="Editar detalhes do gráfico">
+        <button mat-icon-button (click)="startEdit()" matTooltip="Editar detalhes da publicação">
           <mat-icon>edit</mat-icon>
         </button>
-        <button mat-icon-button (click)="deleteArtifact()" matTooltip="Remover este gráfico">
+        <button mat-icon-button (click)="deleteArtifact()" matTooltip="Remover esta publicação">
           <mat-icon color="warn">delete</mat-icon>
         </button>
       }
     } @else {
       <mat-form-field appearance="outline" class="edit-title-field">
-        <mat-label>Título do Gráfico</mat-label>
+        <mat-label>Título da Publicação</mat-label>
         <input matInput [(ngModel)]="tempLabel" (ngModelChange)="updatePreview()" (keyup.enter)="saveChanges()">
       </mat-form-field>
       <div class="edit-actions">
@@ -45,10 +52,35 @@
           <mat-card-subtitle>
             Análise: <strong>{{ analysis()?.name }}</strong> | 
             Publicado em: <strong>{{ artifact()?.createdAt | date:'short' }}</strong>
+            @if (isMapArtifact()) {
+              | Nível: <strong>{{ (artifact()?.geoLevel || artifact()?.params?.['geoLevel'] || 'uf') | uppercase }}</strong>
+            }
           </mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          @if (graphData) {
+          @if (isMapArtifact()) {
+            <div class="published-map-wrapper">
+              <div #publishedMapContainer class="published-leaflet-map"></div>
+
+              @if (mapMaxVal() > 0) {
+                <div class="map-legend-card">
+                  <div class="map-legend-title">
+                    {{ artifact()?.params?.['categoryVar'] || 'Legenda' }}
+                  </div>
+                  <div class="map-legend-gradient-bar">
+                    @for (color of mapColorScale(); track color) {
+                      <div class="map-legend-step" [style.backgroundColor]="color"></div>
+                    }
+                  </div>
+                  <div class="map-legend-labels">
+                    <span>{{ formatMapLegendValue(mapMinVal()) }}</span>
+                    <span>{{ formatMapLegendValue((mapMinVal() + mapMaxVal()) / 2) }}</span>
+                    <span>{{ formatMapLegendValue(mapMaxVal()) }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else if (graphData) {
             <plotly-plot 
               [data]="graphData.data" 
               [layout]="graphData.layout" 
@@ -71,124 +103,155 @@
           </mat-card-header>
           <mat-card-content>
             <div class="edit-form">
-              <div class="section-group">
-                <h4>Títulos dos Eixos</h4>
-                <mat-form-field appearance="outline">
-                  <mat-label>Título do Eixo X</mat-label>
-                  <input matInput [(ngModel)]="tempXTitle" (ngModelChange)="updatePreview()" placeholder="Ex: Categorias">
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Título do Eixo Y</mat-label>
-                  <input matInput [(ngModel)]="tempYTitle" (ngModelChange)="updatePreview()" placeholder="Ex: Valores">
-                </mat-form-field>
-              </div>
-
-              <mat-divider></mat-divider>
-
-              <div class="section-group">
-                <h4>Formatação do Eixo Y (Rótulos)</h4>
-                <div class="row-fields">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Prefixo (ex: $)</mat-label>
-                    <input matInput [(ngModel)]="tempYPrefix" (ngModelChange)="updatePreview()">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Sufixo (ex: %)</mat-label>
-                    <input matInput [(ngModel)]="tempYSuffix" (ngModelChange)="updatePreview()">
+              @if (isMapArtifact()) {
+                <div class="section-group">
+                  <h4>Escala de Cores do Mapa</h4>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Paleta Coroplética</mat-label>
+                    <mat-select [(ngModel)]="tempColorScaleName" (ngModelChange)="updatePreview()">
+                      @for (scaleKey of colorScaleKeys; track scaleKey) {
+                        <mat-option [value]="scaleKey">{{ colorScales[scaleKey].label }}</mat-option>
+                      }
+                    </mat-select>
                   </mat-form-field>
                 </div>
-              </div>
 
-              <mat-divider></mat-divider>
+                <mat-divider></mat-divider>
 
-              <div class="section-group">
-                <h4>Rótulos no Gráfico</h4>
-                <mat-button-toggle-group [(ngModel)]="tempValueDisplayMode" (ngModelChange)="updatePreview()" class="full-width edit-labels-toggle">
-                  <mat-button-toggle value="none" matTooltip="Ocultar rótulos">
-                    <mat-icon>visibility_off</mat-icon> Nenhum
-                  </mat-button-toggle>
-                  <mat-button-toggle value="value" matTooltip="Apenas valor">
-                    <mat-icon>tag</mat-icon> Valor
-                  </mat-button-toggle>
-                  <mat-button-toggle value="percent" matTooltip="Apenas porcentagem">
-                    <mat-icon>percent</mat-icon> %
-                  </mat-button-toggle>
-                  <mat-button-toggle value="both" matTooltip="Ambos">
-                    <mat-icon>auto_graph</mat-icon> Ambos
-                  </mat-button-toggle>
-                </mat-button-toggle-group>
+                <div class="section-group">
+                  <h4>Exibição no Tooltip</h4>
+                  <mat-button-toggle-group [(ngModel)]="tempValueDisplayMode" (ngModelChange)="updatePreview()" class="full-width edit-labels-toggle">
+                    <mat-button-toggle value="value" matTooltip="Apenas valor">
+                      <mat-icon>tag</mat-icon> Valor
+                    </mat-button-toggle>
+                    <mat-button-toggle value="percent" matTooltip="Apenas porcentagem">
+                      <mat-icon>percent</mat-icon> %
+                    </mat-button-toggle>
+                    <mat-button-toggle value="both" matTooltip="Ambos">
+                      <mat-icon>auto_graph</mat-icon> Ambos
+                    </mat-button-toggle>
+                  </mat-button-toggle-group>
+                </div>
+              } @else {
+                <div class="section-group">
+                  <h4>Títulos dos Eixos</h4>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Título do Eixo X</mat-label>
+                    <input matInput [(ngModel)]="tempXTitle" (ngModelChange)="updatePreview()" placeholder="Ex: Categorias">
+                  </mat-form-field>
 
-                @if (tempValueDisplayMode === 'percent' || tempValueDisplayMode === 'both') {
-                  <div class="edit-percent-card">
-                    <div class="edit-percent-field">
-                      <span class="mini-label">Base do Total (100%):</span>
-                      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-                        <mat-select [(ngModel)]="tempPercentBaseMode" (ngModelChange)="updatePreview()">
-                          <mat-option value="series_sum">Automático (Soma da Série)</mat-option>
-                          @if ((artifact()?.data?.series?.length || 0) > 1) {
-                            <mat-option value="category_sum">Soma por Categoria (Eixo X)</mat-option>
-                          }
-                          <mat-option value="custom">Informar Total Personalizado</mat-option>
-                        </mat-select>
-                      </mat-form-field>
-                    </div>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Título do Eixo Y</mat-label>
+                    <input matInput [(ngModel)]="tempYTitle" (ngModelChange)="updatePreview()" placeholder="Ex: Valores">
+                  </mat-form-field>
+                </div>
 
-                    @if (tempPercentBaseMode === 'custom') {
+                <mat-divider></mat-divider>
+
+                <div class="section-group">
+                  <h4>Formatação do Eixo Y (Rótulos)</h4>
+                  <div class="row-fields">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Prefixo (ex: $)</mat-label>
+                      <input matInput [(ngModel)]="tempYPrefix" (ngModelChange)="updatePreview()">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Sufixo (ex: %)</mat-label>
+                      <input matInput [(ngModel)]="tempYSuffix" (ngModelChange)="updatePreview()">
+                    </mat-form-field>
+                  </div>
+                </div>
+
+                <mat-divider></mat-divider>
+
+                <div class="section-group">
+                  <h4>Rótulos no Gráfico</h4>
+                  <mat-button-toggle-group [(ngModel)]="tempValueDisplayMode" (ngModelChange)="updatePreview()" class="full-width edit-labels-toggle">
+                    <mat-button-toggle value="none" matTooltip="Ocultar rótulos">
+                      <mat-icon>visibility_off</mat-icon> Nenhum
+                    </mat-button-toggle>
+                    <mat-button-toggle value="value" matTooltip="Apenas valor">
+                      <mat-icon>tag</mat-icon> Valor
+                    </mat-button-toggle>
+                    <mat-button-toggle value="percent" matTooltip="Apenas porcentagem">
+                      <mat-icon>percent</mat-icon> %
+                    </mat-button-toggle>
+                    <mat-button-toggle value="both" matTooltip="Ambos">
+                      <mat-icon>auto_graph</mat-icon> Ambos
+                    </mat-button-toggle>
+                  </mat-button-toggle-group>
+
+                  @if (tempValueDisplayMode === 'percent' || tempValueDisplayMode === 'both') {
+                    <div class="edit-percent-card">
                       <div class="edit-percent-field">
+                        <span class="mini-label">Base do Total (100%):</span>
                         <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-                          <mat-label>Total de Referência (Base 100%)</mat-label>
-                          <input matInput type="number" min="0" [(ngModel)]="tempCustomPercentTotal" (ngModelChange)="updatePreview()" placeholder="Ex: 100000">
-                          <mat-icon matSuffix>calculate</mat-icon>
+                          <mat-select [(ngModel)]="tempPercentBaseMode" (ngModelChange)="updatePreview()">
+                            <mat-option value="series_sum">Automático (Soma da Série)</mat-option>
+                            @if ((artifact()?.data?.series?.length || 0) > 1) {
+                              <mat-option value="category_sum">Soma por Categoria (Eixo X)</mat-option>
+                            }
+                            <mat-option value="custom">Informar Total Personalizado</mat-option>
+                          </mat-select>
+                        </mat-form-field>
+                      </div>
+
+                      @if (tempPercentBaseMode === 'custom') {
+                        <div class="edit-percent-field">
+                          <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                            <mat-label>Total de Referência (Base 100%)</mat-label>
+                            <input matInput type="number" min="0" [(ngModel)]="tempCustomPercentTotal" (ngModelChange)="updatePreview()" placeholder="Ex: 100000">
+                            <mat-icon matSuffix>calculate</mat-icon>
+                          </mat-form-field>
+                        </div>
+                      }
+
+                      <div class="edit-percent-field">
+                        <span class="mini-label">Casas Decimais:</span>
+                        <mat-button-toggle-group [(ngModel)]="tempPercentDecimals" (ngModelChange)="updatePreview()" class="decimals-toggle full-width">
+                          <mat-button-toggle [value]="0">0 (25%)</mat-button-toggle>
+                          <mat-button-toggle [value]="1">1 (25,4%)</mat-button-toggle>
+                          <mat-button-toggle [value]="2">2 (25,42%)</mat-button-toggle>
+                        </mat-button-toggle-group>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <mat-divider></mat-divider>
+
+                <div class="section-group">
+                  <h4>Renomear Legendas (Séries)</h4>
+                  <div class="category-edit-list">
+                    @for (sName of getSeriesList(); track sName) {
+                      <div class="category-edit-row">
+                        <span class="orig-cat" appAutoTooltip>{{ sName }}</span>
+                        <mat-icon>arrow_forward</mat-icon>
+                        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                          <input matInput [placeholder]="sName" [(ngModel)]="tempLegendLabelMap[sName]" (ngModelChange)="updatePreview()">
                         </mat-form-field>
                       </div>
                     }
-
-                    <div class="edit-percent-field">
-                      <span class="mini-label">Casas Decimais:</span>
-                      <mat-button-toggle-group [(ngModel)]="tempPercentDecimals" (ngModelChange)="updatePreview()" class="decimals-toggle full-width">
-                        <mat-button-toggle [value]="0">0 (25%)</mat-button-toggle>
-                        <mat-button-toggle [value]="1">1 (25,4%)</mat-button-toggle>
-                        <mat-button-toggle [value]="2">2 (25,42%)</mat-button-toggle>
-                      </mat-button-toggle-group>
-                    </div>
                   </div>
-                }
-              </div>
-
-              <mat-divider></mat-divider>
-
-              <div class="section-group">
-                <h4>Renomear Legendas (Séries)</h4>
-                <div class="category-edit-list">
-                  @for (sName of getSeriesList(); track sName) {
-                    <div class="category-edit-row">
-                      <span class="orig-cat" appAutoTooltip>{{ sName }}</span>
-                      <mat-icon>arrow_forward</mat-icon>
-                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                        <input matInput [placeholder]="sName" [(ngModel)]="tempLegendLabelMap[sName]" (ngModelChange)="updatePreview()">
-                      </mat-form-field>
-                    </div>
-                  }
                 </div>
-              </div>
 
-              <mat-divider></mat-divider>
+                <mat-divider></mat-divider>
 
-              <div class="section-group">
-                <h4>Renomear Categorias (Eixo X)</h4>
-                <div class="category-edit-list">
-                  @for (cat of artifact()?.data?.x; track cat) {
-                    <div class="category-edit-row">
-                      <span class="orig-cat" appAutoTooltip>{{ cat }}</span>
-                      <mat-icon>arrow_forward</mat-icon>
-                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                        <input matInput [placeholder]="cat" [(ngModel)]="tempXLabelMap[cat]" (ngModelChange)="updatePreview()">
-                      </mat-form-field>
-                    </div>
-                  }
+                <div class="section-group">
+                  <h4>Renomear Categorias (Eixo X)</h4>
+                  <div class="category-edit-list">
+                    @for (cat of artifact()?.data?.x; track cat) {
+                      <div class="category-edit-row">
+                        <span class="orig-cat" appAutoTooltip>{{ cat }}</span>
+                        <mat-icon>arrow_forward</mat-icon>
+                        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                          <input matInput [placeholder]="cat" [(ngModel)]="tempXLabelMap[cat]" (ngModelChange)="updatePreview()">
+                        </mat-form-field>
+                      </div>
+                    }
+                  </div>
                 </div>
-              </div>
+              }
               
               <p class="edit-hint">As alterações serão aplicadas ao salvar no cabeçalho.</p>
             </div>

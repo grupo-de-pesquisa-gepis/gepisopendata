@@ -18,12 +18,16 @@ export interface ArtifactSeries {
 export interface AnalysisArtifact {
   id: string;
   label: string;
-  type: 'barchart' | 'linechart' | 'table' | 'statistics';
+  type: 'barchart' | 'linechart' | 'map_choropleth' | 'table' | 'statistics';
   params: Record<string, any>;
+  geoLevel?: 'pais' | 'regioes' | 'uf' | 'intermediarias' | 'imediatas' | 'microrregioes' | 'municipios' | string;
+  colorScale?: string[];
   data?: {
     x: any[];
     y?: any[];
     series?: ArtifactSeries[];
+    locations?: string[];
+    values?: number[];
   };
   xTitle?: string;
   yTitle?: string;
